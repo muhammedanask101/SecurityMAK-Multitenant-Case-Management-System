@@ -28,7 +28,7 @@ Development is done incrementally with a focus on:
 
 ## 🧠 Why This Project Exists
 
-SecureCase exists to show **how engineers should think** when building systems that handle sensitive data — especially in environments involving compliance, governance, or public trust.
+SecureCase exists to show **how engineers should think** when building systems that handle sensitive data, especially in environments involving compliance, governance, or public trust.
 
 It emphasizes:
 > *Good judgment over clever code.*
