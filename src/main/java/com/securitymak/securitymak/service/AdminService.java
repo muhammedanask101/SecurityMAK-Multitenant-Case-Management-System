@@ -5,9 +5,14 @@ import com.securitymak.securitymak.model.Role;
 import com.securitymak.securitymak.model.User;
 import com.securitymak.securitymak.repository.RoleRepository;
 import com.securitymak.securitymak.repository.UserRepository;
+import com.securitymak.securitymak.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.securitymak.securitymak.dto.AuditLogView;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -16,6 +21,7 @@ public class AdminService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final AuditService auditService;
 
     public List<UserAdminView> getAllUsers() {
         return userRepository.findAll()
@@ -28,16 +34,59 @@ public class AdminService {
                 .toList();
     }
 
+        public Page<AuditLogView> getAuditLogs(
+            String actorEmail,
+            String action,
+            String targetType,
+            LocalDateTime from,
+            LocalDateTime to,
+            Pageable pageable
+    ) {
+        return auditService.getAuditLogs(
+                actorEmail,
+                action,
+                targetType,
+                from,
+                to,
+                pageable
+        );
+    }
+
+
+
     public void updateUserRole(Long userId, String roleName) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Role role = roleRepository.findByName(roleName.toUpperCase())
+        Role newRole = roleRepository.findByName(roleName.toUpperCase())
                 .orElseThrow(() -> new RuntimeException("Role not found"));
 
-        user.setRole(role);
+        String actorEmail = SecurityUtils.getCurrentUserEmail();
+
+        // Prevent self-demotion
+        if (user.getEmail().equals(actorEmail)) {
+            throw new RuntimeException("Admins cannot change their own role");
+        }
+
+        String oldRole = user.getRole().getName();
+
+        if (oldRole.equals(newRole.getName())) {
+            return;
+        }
+
+        user.setRole(newRole);
         userRepository.save(user);
+
+        // audit log
+        auditService.log(
+                actorEmail,
+                "CHANGE_USER_ROLE",
+                "USER",
+                user.getId(),
+                oldRole,
+                newRole.getName()
+        );
     }
 
     public List<Role> getAllRoles() {
