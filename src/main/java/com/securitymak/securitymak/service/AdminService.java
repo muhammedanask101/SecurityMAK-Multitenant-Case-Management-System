@@ -56,6 +56,8 @@ public class AdminService {
 
     public void updateUserRole(Long userId, String roleName) {
 
+        Long currentTenantId = SecurityUtils.getCurrentTenantId();
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -75,6 +77,10 @@ public class AdminService {
             return;
         }
 
+        if (!user.getTenant().getId().equals(currentTenantId)) {
+            throw new RuntimeException("Cross-tenant access denied");
+        }
+
         user.setRole(newRole);
         userRepository.save(user);
 
@@ -85,7 +91,8 @@ public class AdminService {
                 "USER",
                 user.getId(),
                 oldRole,
-                newRole.getName()
+                newRole.getName(),
+                SecurityUtils.getCurrentTenantId()
         );
     }
 

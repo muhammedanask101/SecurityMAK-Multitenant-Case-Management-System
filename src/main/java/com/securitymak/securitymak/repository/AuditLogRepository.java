@@ -9,22 +9,31 @@ import java.time.LocalDateTime;
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
-    Page<AuditLog> findByActorEmailContainingIgnoreCase(
+    Page<AuditLog> findByTenantId(
+            Long tenantId,
+            Pageable pageable
+    );
+
+    Page<AuditLog> findByTenantIdAndActorEmailContainingIgnoreCase(
+            Long tenantId,
             String actorEmail,
             Pageable pageable
     );
 
-    Page<AuditLog> findByAction(
+    Page<AuditLog> findByTenantIdAndAction(
+            Long tenantId,
             String action,
             Pageable pageable
     );
 
-    Page<AuditLog> findByTargetType(
+    Page<AuditLog> findByTenantIdAndTargetType(
+            Long tenantId,
             String targetType,
             Pageable pageable
     );
 
-    Page<AuditLog> findByTimestampBetween(
+    Page<AuditLog> findByTenantIdAndTimestampBetween(
+            Long tenantId,
             LocalDateTime from,
             LocalDateTime to,
             Pageable pageable

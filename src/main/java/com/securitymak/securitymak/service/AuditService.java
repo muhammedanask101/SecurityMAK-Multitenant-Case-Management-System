@@ -3,6 +3,8 @@ package com.securitymak.securitymak.service;
 import com.securitymak.securitymak.dto.AuditLogView;
 import com.securitymak.securitymak.model.AuditLog;
 import com.securitymak.securitymak.repository.AuditLogRepository;
+import com.securitymak.securitymak.security.SecurityUtils;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -21,7 +23,8 @@ public class AuditService {
             String targetType,
             Long targetId,
             String oldValue,
-            String newValue
+            String newValue,
+            Long tenantId
     ) {
         AuditLog log = AuditLog.builder()
                 .actorEmail(actorEmail)
@@ -30,11 +33,13 @@ public class AuditService {
                 .targetId(targetId)
                 .oldValue(oldValue)
                 .newValue(newValue)
+                .tenantId(tenantId)
                 .timestamp(LocalDateTime.now())
                 .build();
 
         auditLogRepository.save(log);
     }
+
 
     // paginated and filtered access
     public Page<AuditLogView> getAuditLogs(
@@ -46,22 +51,29 @@ public class AuditService {
             Pageable pageable
     ) {
 
+        Long tenantId = SecurityUtils.getCurrentTenantId();
+
         Page<AuditLog> page;
 
         if (actorEmail != null) {
             page = auditLogRepository
-                    .findByActorEmailContainingIgnoreCase(actorEmail, pageable);
+                    .findByTenantIdAndActorEmailContainingIgnoreCase(
+                            tenantId, actorEmail, pageable);
         } else if (action != null) {
             page = auditLogRepository
-                    .findByAction(action, pageable);
+                    .findByTenantIdAndAction(
+                            tenantId, action, pageable);
         } else if (targetType != null) {
             page = auditLogRepository
-                    .findByTargetType(targetType, pageable);
+                    .findByTenantIdAndTargetType(
+                            tenantId, targetType, pageable);
         } else if (from != null && to != null) {
             page = auditLogRepository
-                    .findByTimestampBetween(from, to, pageable);
+                    .findByTenantIdAndTimestampBetween(
+                            tenantId, from, to, pageable);
         } else {
-            page = auditLogRepository.findAll(pageable);
+            page = auditLogRepository
+                    .findByTenantId(tenantId, pageable);
         }
 
         return page.map(this::toView);

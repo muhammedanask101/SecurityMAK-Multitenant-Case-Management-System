@@ -32,6 +32,10 @@ public class User implements UserDetails {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(

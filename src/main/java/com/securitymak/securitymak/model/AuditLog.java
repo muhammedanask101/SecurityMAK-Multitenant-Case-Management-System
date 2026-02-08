@@ -36,4 +36,7 @@ public class AuditLog {
 
     @Column(nullable = false)
     private LocalDateTime timestamp;
+
+    @Column(nullable = false)
+    private Long tenantId;
 }

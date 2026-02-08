@@ -6,9 +6,11 @@ import com.securitymak.securitymak.dto.RegisterRequest;
 import com.securitymak.securitymak.dto.UserProfileResponse;
 import com.securitymak.securitymak.exception.*;
 import com.securitymak.securitymak.model.Role;
+import com.securitymak.securitymak.model.Tenant;
 import com.securitymak.securitymak.model.User;
 import com.securitymak.securitymak.repository.RoleRepository;
 import com.securitymak.securitymak.repository.UserRepository;
+import com.securitymak.securitymak.repository.TenantRepository;
 import com.securitymak.securitymak.security.JwtService;
 import com.securitymak.securitymak.security.SecurityUtils;
 
@@ -22,6 +24,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
@@ -35,10 +38,15 @@ public class AuthService {
                 .orElseThrow(() ->
                         new RuntimeException("Default role USER not found"));
 
+        Tenant tenant = tenantRepository.findByCode("DEFAULT")
+                .orElseThrow(() -> 
+                        new RuntimeException("Default tenant missing"));
+
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(userRole)
+                .tenant(tenant)
                 .build();
 
         userRepository.save(user);
