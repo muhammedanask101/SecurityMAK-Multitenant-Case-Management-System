@@ -4,8 +4,10 @@ import com.securitymak.securitymak.dto.LoginRequest;
 import com.securitymak.securitymak.dto.LoginResponse;
 import com.securitymak.securitymak.dto.RegisterRequest;
 import com.securitymak.securitymak.dto.UserProfileResponse;
+import com.securitymak.securitymak.exception.*;
 import com.securitymak.securitymak.model.Role;
 import com.securitymak.securitymak.model.User;
+import com.securitymak.securitymak.repository.RoleRepository;
 import com.securitymak.securitymak.repository.UserRepository;
 import com.securitymak.securitymak.security.JwtService;
 import com.securitymak.securitymak.security.SecurityUtils;
@@ -19,26 +21,31 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
     public LoginResponse register(RegisterRequest request) {
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already registered");
+            throw new BadRequestException("Email already registered");
         }
+
+        Role userRole = roleRepository.findByName("USER")
+                .orElseThrow(() ->
+                        new RuntimeException("Default role USER not found"));
 
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.ROLE_USER)
+                .role(userRole)
                 .build();
 
         userRepository.save(user);
 
         String token = jwtService.generateToken(
                 user.getEmail(),
-                user.getRole().name()
+                user.getRole().getName()
         );
 
         return new LoginResponse(token);
@@ -55,7 +62,7 @@ public class AuthService {
 
         String token = jwtService.generateToken(
                 user.getEmail(),
-                user.getRole().name()
+                user.getRole().getName()
         );
 
         return new LoginResponse(token);
@@ -71,7 +78,7 @@ public class AuthService {
         return new UserProfileResponse(
                 user.getId(),
                 user.getEmail(),
-                user.getRole().name()
+                user.getRole().getName()
         );
     }
 }

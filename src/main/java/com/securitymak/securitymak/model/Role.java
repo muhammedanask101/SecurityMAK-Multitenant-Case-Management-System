@@ -1,6 +1,23 @@
 package com.securitymak.securitymak.model;
 
-public enum Role {
-    ROLE_USER,
-    ROLE_ADMIN
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "roles")
+@Getter
+@NoArgsConstructor
+public class Role {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String name; // ADMIN, USER
+
+    public Role(String name) {
+        this.name = name;
+    }
 }

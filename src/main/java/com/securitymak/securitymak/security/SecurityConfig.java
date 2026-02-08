@@ -30,8 +30,10 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**", "/error").permitAll()
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/user/**").authenticated()
                 .requestMatchers("/test/secure").authenticated()
-                .anyRequest().authenticated()
+                .anyRequest().denyAll()
             )
             .addFilterBefore(
                     jwtAuthenticationFilter,
