@@ -3,10 +3,13 @@ package com.securitymak.securitymak.service;
 import com.securitymak.securitymak.dto.LoginRequest;
 import com.securitymak.securitymak.dto.LoginResponse;
 import com.securitymak.securitymak.dto.RegisterRequest;
+import com.securitymak.securitymak.dto.UserProfileResponse;
 import com.securitymak.securitymak.model.Role;
 import com.securitymak.securitymak.model.User;
 import com.securitymak.securitymak.repository.UserRepository;
 import com.securitymak.securitymak.security.JwtService;
+import com.securitymak.securitymak.security.SecurityUtils;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,12 +22,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    /**
-     * Register a new user and return JWT token
-     */
     public LoginResponse register(RegisterRequest request) {
 
-        // prevent duplicate users
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already registered");
         }
@@ -61,4 +60,20 @@ public class AuthService {
 
         return new LoginResponse(token);
     }
+
+    public UserProfileResponse getCurrentUserProfile() {
+
+        String email = SecurityUtils.getCurrentUserEmail();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return new UserProfileResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getRole().name()
+        );
+    }
 }
+
+
