@@ -15,16 +15,13 @@ public class UserService {
 
     public UserProfileResponse getCurrentUserProfile() {
 
-        String email = SecurityUtils.getCurrentUserEmail();
+    User user = SecurityUtils.getCurrentUser();
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        return new UserProfileResponse(
-                user.getId(),
-                user.getEmail(),
-                user.getRole().getName()
-        );
-    }
+    return new UserProfileResponse(
+            user.getId(),
+            user.getEmail(),
+            user.getRole().getName()
+    );
+}
 }
 

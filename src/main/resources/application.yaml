@@ -6,14 +6,14 @@ spring:
     name: securitymak
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/securitymak_db
+    url: jdbc:postgresql://localhost:5432/securitymak
     username: securitymak_user
     password: securitymak123
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
     open-in-view: false
     properties:

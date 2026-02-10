@@ -24,7 +24,10 @@ public class AdminService {
     private final AuditService auditService;
 
     public List<UserAdminView> getAllUsers() {
-        return userRepository.findAll()
+
+    Long tenantId = SecurityUtils.getCurrentTenantId();
+
+        return userRepository.findByTenantId(tenantId)
                 .stream()
                 .map(user -> new UserAdminView(
                         user.getId(),
@@ -57,28 +60,28 @@ public class AdminService {
     public void updateUserRole(Long userId, String roleName) {
 
         Long currentTenantId = SecurityUtils.getCurrentTenantId();
+        String actorEmail = SecurityUtils.getCurrentUserEmail();
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Role newRole = roleRepository.findByName(roleName.toUpperCase())
-                .orElseThrow(() -> new RuntimeException("Role not found"));
+        // cross-tenant protection
+        if (!user.getTenant().getId().equals(currentTenantId)) {
+            throw new RuntimeException("Cross-tenant access denied");
+        }
 
-        String actorEmail = SecurityUtils.getCurrentUserEmail();
-
-        // Prevent self-demotion
+        // prevent self-demotion
         if (user.getEmail().equals(actorEmail)) {
             throw new RuntimeException("Admins cannot change their own role");
         }
 
+        Role newRole = roleRepository.findByName(roleName.toUpperCase())
+                .orElseThrow(() -> new RuntimeException("Role not found"));
+
         String oldRole = user.getRole().getName();
 
         if (oldRole.equals(newRole.getName())) {
-            return;
-        }
-
-        if (!user.getTenant().getId().equals(currentTenantId)) {
-            throw new RuntimeException("Cross-tenant access denied");
+            return; // no-op
         }
 
         user.setRole(newRole);
@@ -92,7 +95,7 @@ public class AdminService {
                 user.getId(),
                 oldRole,
                 newRole.getName(),
-                SecurityUtils.getCurrentTenantId()
+                currentTenantId
         );
     }
 

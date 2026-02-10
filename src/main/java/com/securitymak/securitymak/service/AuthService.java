@@ -30,17 +30,17 @@ public class AuthService {
 
     public LoginResponse register(RegisterRequest request) {
 
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email already registered");
+         Tenant tenant = tenantRepository.findByCode("DEFAULT")
+            .orElseThrow(() -> new RuntimeException("Default tenant missing"));
+
+        if (userRepository.existsByEmailAndTenantId(request.getEmail(), tenant.getId())) {
+                throw new BadRequestException("Email already registered");
         }
+
 
         Role userRole = roleRepository.findByName("USER")
                 .orElseThrow(() ->
                         new RuntimeException("Default role USER not found"));
-
-        Tenant tenant = tenantRepository.findByCode("DEFAULT")
-                .orElseThrow(() -> 
-                        new RuntimeException("Default tenant missing"));
 
         User user = User.builder()
                 .email(request.getEmail())
@@ -76,19 +76,6 @@ public class AuthService {
         return new LoginResponse(token);
     }
 
-    public UserProfileResponse getCurrentUserProfile() {
-
-        String email = SecurityUtils.getCurrentUserEmail();
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        return new UserProfileResponse(
-                user.getId(),
-                user.getEmail(),
-                user.getRole().getName()
-        );
-    }
 }
 
 

@@ -6,39 +6,32 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 public final class SecurityUtils {
 
-    private SecurityUtils() {
-        // utility class
+    private SecurityUtils() {}
+
+    public static Authentication getAuth() {
+        Authentication auth = SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new RuntimeException("No authenticated user");
+        }
+        return auth;
     }
 
     public static String getCurrentUserEmail() {
-        Authentication auth = SecurityContextHolder
-                .getContext()
-                .getAuthentication();
-
-        if (auth == null || !auth.isAuthenticated()) {
-            throw new RuntimeException("No authenticated user");
-        }
-
-        return auth.getName();
+        return getAuth().getName(); // safe
     }
 
     public static User getCurrentUser() {
-        Authentication auth = SecurityContextHolder
-                .getContext()
-                .getAuthentication();
-
-        if (auth == null || !auth.isAuthenticated()) {
-            throw new RuntimeException("No authenticated user");
-        }
-
-        Object principal = auth.getPrincipal();
+        Object principal = getAuth().getPrincipal();
 
         if (principal instanceof User user) {
             return user;
         }
 
         throw new RuntimeException(
-                "Unexpected principal type: " + principal.getClass().getName()
+                "Principal is not domain User: " + principal.getClass().getName()
         );
     }
 
