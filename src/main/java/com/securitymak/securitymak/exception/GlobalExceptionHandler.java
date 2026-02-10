@@ -75,4 +75,27 @@ public class GlobalExceptionHandler {
                 "An unexpected error occurred"
         );
     }
+
+    // 401 — Authentication failures
+    @ExceptionHandler(UnauthorizedException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ApiError handleUnauthorized(UnauthorizedException ex) {
+        return ApiError.of(
+                HttpStatus.UNAUTHORIZED.value(),
+                "UNAUTHORIZED",
+                ex.getMessage() != null ? ex.getMessage() : "Invalid credentials"
+        );
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiError handleNotFound(ResourceNotFoundException ex) {
+        return ApiError.of(404, "NOT_FOUND", ex.getMessage());
+    }
+
+    @ExceptionHandler(BusinessRuleViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleBusinessRule(BusinessRuleViolationException ex) {
+        return ApiError.of(400, "BUSINESS_RULE_VIOLATION", ex.getMessage());
+    }
 }

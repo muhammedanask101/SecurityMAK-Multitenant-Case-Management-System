@@ -1,6 +1,8 @@
 package com.securitymak.securitymak.service;
 
 import com.securitymak.securitymak.dto.UserAdminView;
+import com.securitymak.securitymak.exception.BusinessRuleViolationException;
+import com.securitymak.securitymak.exception.ResourceNotFoundException;
 import com.securitymak.securitymak.model.Role;
 import com.securitymak.securitymak.model.User;
 import com.securitymak.securitymak.repository.RoleRepository;
@@ -63,15 +65,15 @@ public class AdminService {
 
         User user = userRepository
                 .findByIdAndTenant_Id(userId, tenantId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // prevent self-demotion
         if (user.getEmail().equals(actorEmail)) {
-            throw new RuntimeException("Admins cannot change their own role");
+            throw new BusinessRuleViolationException("Admins cannot change their own role");
         }
 
         Role newRole = roleRepository.findByName(roleName.toUpperCase())
-                .orElseThrow(() -> new RuntimeException("Role not found"));
+                .orElseThrow(() -> new BusinessRuleViolationException("Role not found"));
 
         String oldRole = user.getRole().getName();
         if (oldRole.equals(newRole.getName())) {

@@ -34,10 +34,13 @@ public class AdminController {
             @PathVariable Long userId,
             @RequestParam String roleName
     ) {
+        if (roleName == null || roleName.isBlank()) {
+            throw new IllegalArgumentException("roleName is required");
+        }
         adminService.updateUserRole(userId, roleName);
         return "Role updated successfully";
     }
-
+    
     @GetMapping("/roles")
     public List<Role> getAllRoles() {
         return adminService.getAllRoles();

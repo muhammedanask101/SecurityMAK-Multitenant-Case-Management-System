@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.access.AccessDeniedException;
 
 import com.securitymak.securitymak.model.User;
 
@@ -22,6 +23,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return path.startsWith("/auth/");
+    }
 
     @Override
     protected void doFilterInternal(
@@ -49,7 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             User user = (User) userDetails;
 
             if (!user.getTenant().getId().equals(tokenTenantId)) {
-                throw new SecurityException("Tenant mismatch in JWT");
+                throw new AccessDeniedException("Tenant mismatch in JWT");
             }
 
             if (jwtService.isTokenValid(token, userDetails)) {
