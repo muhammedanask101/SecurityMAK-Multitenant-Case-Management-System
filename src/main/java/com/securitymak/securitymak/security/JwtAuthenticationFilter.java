@@ -12,6 +12,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.securitymak.securitymak.model.User;
+
 import java.io.IOException;
 
 @Component
@@ -38,9 +40,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
         String email = jwtService.extractUsername(token);
 
+        Long tokenTenantId = jwtService.extractTenantId(token);
+
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails =
                     userDetailsService.loadUserByUsername(email);
+
+            User user = (User) userDetails;
+
+            if (!user.getTenant().getId().equals(tokenTenantId)) {
+                throw new SecurityException("Tenant mismatch in JWT");
+            }
 
             if (jwtService.isTokenValid(token, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken =

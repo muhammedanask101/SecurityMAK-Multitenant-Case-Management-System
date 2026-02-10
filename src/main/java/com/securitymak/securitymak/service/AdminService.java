@@ -25,9 +25,9 @@ public class AdminService {
 
     public List<UserAdminView> getAllUsers() {
 
-    Long tenantId = SecurityUtils.getCurrentTenantId();
+        Long tenantId = SecurityUtils.getCurrentTenantId();
 
-        return userRepository.findByTenantId(tenantId)
+        return userRepository.findAllByTenant_Id(tenantId)
                 .stream()
                 .map(user -> new UserAdminView(
                         user.getId(),
@@ -37,7 +37,7 @@ public class AdminService {
                 .toList();
     }
 
-        public Page<AuditLogView> getAuditLogs(
+    public Page<AuditLogView> getAuditLogs(
             String actorEmail,
             String action,
             String targetType,
@@ -56,19 +56,14 @@ public class AdminService {
     }
 
 
-
     public void updateUserRole(Long userId, String roleName) {
 
-        Long currentTenantId = SecurityUtils.getCurrentTenantId();
+        Long tenantId = SecurityUtils.getCurrentTenantId();
         String actorEmail = SecurityUtils.getCurrentUserEmail();
 
-        User user = userRepository.findById(userId)
+        User user = userRepository
+                .findByIdAndTenant_Id(userId, tenantId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // cross-tenant protection
-        if (!user.getTenant().getId().equals(currentTenantId)) {
-            throw new RuntimeException("Cross-tenant access denied");
-        }
 
         // prevent self-demotion
         if (user.getEmail().equals(actorEmail)) {
@@ -79,15 +74,13 @@ public class AdminService {
                 .orElseThrow(() -> new RuntimeException("Role not found"));
 
         String oldRole = user.getRole().getName();
-
         if (oldRole.equals(newRole.getName())) {
-            return; // no-op
+            return;
         }
 
         user.setRole(newRole);
         userRepository.save(user);
 
-        // audit log
         auditService.log(
                 actorEmail,
                 "CHANGE_USER_ROLE",
@@ -95,7 +88,7 @@ public class AdminService {
                 user.getId(),
                 oldRole,
                 newRole.getName(),
-                currentTenantId
+                tenantId
         );
     }
 
@@ -103,3 +96,6 @@ public class AdminService {
         return roleRepository.findAll();
     }
 }
+
+
+

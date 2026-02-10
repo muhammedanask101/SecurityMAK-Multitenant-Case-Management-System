@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import com.securitymak.securitymak.model.User;
+
 import java.security.Key;
 import java.util.Date;
 
@@ -23,10 +25,11 @@ public class JwtService {
         this.expiration = expiration;
     }
 
-    public String generateToken(String email, String role) {
+    public String generateToken(User user) {
         return Jwts.builder()
-                .setSubject(email)
-                .claim("role", role)
+                .setSubject(user.getEmail())
+                .claim("role", user.getRole().getName())
+                .claim("tenantId", user.getTenant().getId()) 
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -35,6 +38,10 @@ public class JwtService {
 
     public String extractUsername(String token) {
         return extractAllClaims(token).getSubject();
+    }
+
+    public Long extractTenantId(String token) {
+        return extractAllClaims(token).get("tenantId", Long.class);
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {

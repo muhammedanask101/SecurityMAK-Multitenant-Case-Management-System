@@ -39,4 +39,5 @@ public class AuditLog {
 
     @Column(nullable = false)
     private Long tenantId;
+
 }

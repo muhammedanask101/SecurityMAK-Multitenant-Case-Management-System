@@ -8,13 +8,15 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    // 🔐 AUTHENTICATION ONLY (tenant not resolved yet)
+    // 🔐 AUTHENTICATION ONLY
     Optional<User> findByEmail(String email);
 
-    // 🔐 TENANT-SAFE METHODS
-    List<User> findByTenantId(Long tenantId);
+    // 🔐 TENANT-SAFE METHODS (CORRECT FOR @ManyToOne Tenant)
+    List<User> findAllByTenant_Id(Long tenantId);
 
-    Optional<User> findByEmailAndTenantId(String email, Long tenantId);
+    Optional<User> findByIdAndTenant_Id(Long id, Long tenantId);
 
-    boolean existsByEmailAndTenantId(String email, Long tenantId);
+    Optional<User> findByEmailAndTenant_Id(String email, Long tenantId);
+
+    boolean existsByEmailAndTenant_Id(String email, Long tenantId);
 }

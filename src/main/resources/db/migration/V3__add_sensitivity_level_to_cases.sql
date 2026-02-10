@@ -1,0 +1,2 @@
+ALTER TABLE cases
+ADD COLUMN sensitivity_level VARCHAR(20) NOT NULL DEFAULT 'LOW';

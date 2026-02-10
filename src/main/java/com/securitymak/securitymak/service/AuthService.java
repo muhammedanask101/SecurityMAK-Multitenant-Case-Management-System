@@ -33,7 +33,7 @@ public class AuthService {
          Tenant tenant = tenantRepository.findByCode("DEFAULT")
             .orElseThrow(() -> new RuntimeException("Default tenant missing"));
 
-        if (userRepository.existsByEmailAndTenantId(request.getEmail(), tenant.getId())) {
+        if (userRepository.existsByEmailAndTenant_Id(request.getEmail(), tenant.getId())) {
                 throw new BadRequestException("Email already registered");
         }
 
@@ -51,10 +51,7 @@ public class AuthService {
 
         userRepository.save(user);
 
-        String token = jwtService.generateToken(
-                user.getEmail(),
-                user.getRole().getName()
-        );
+        String token = jwtService.generateToken(user);
 
         return new LoginResponse(token);
     }
@@ -68,10 +65,7 @@ public class AuthService {
             throw new RuntimeException("Invalid credentials");
         }
 
-        String token = jwtService.generateToken(
-                user.getEmail(),
-                user.getRole().getName()
-        );
+        String token = jwtService.generateToken(user);
 
         return new LoginResponse(token);
     }

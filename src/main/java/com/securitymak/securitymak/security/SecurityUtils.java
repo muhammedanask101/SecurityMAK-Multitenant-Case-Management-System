@@ -59,4 +59,10 @@ public final class SecurityUtils {
             throw new AccessDeniedException("Admin privileges required");
         }
     }
+
+    public static void requireSameTenant(User target) {
+        if (!target.getTenant().getId().equals(getCurrentTenantId())) {
+            throw new AccessDeniedException("Cross-tenant access denied");
+        }
+    }
 }
