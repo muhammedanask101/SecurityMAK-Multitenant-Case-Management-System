@@ -3,6 +3,8 @@ package com.securitymak.securitymak.security;
 import com.securitymak.securitymak.model.User;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.GrantedAuthority;
 
 public final class SecurityUtils {
 
@@ -37,5 +39,24 @@ public final class SecurityUtils {
 
     public static Long getCurrentTenantId() {
         return getCurrentUser().getTenant().getId();
+    }
+
+    public static void requireAdmin() {
+        Authentication auth = SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Unauthenticated access");
+        }
+
+        boolean isAdmin = auth.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_ADMIN"));
+
+        if (!isAdmin) {
+            throw new AccessDeniedException("Admin privileges required");
+        }
     }
 }

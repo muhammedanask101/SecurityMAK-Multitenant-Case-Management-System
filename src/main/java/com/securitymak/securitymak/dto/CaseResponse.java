@@ -10,5 +10,6 @@ public record CaseResponse(
         String description,
         CaseStatus status,
         String ownerEmail,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {}

@@ -6,7 +6,15 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "cases")
+@Table(
+    name = "cases",
+    indexes = {
+        @Index(
+            name = "idx_case_tenant_owner",
+            columnList = "tenantId, owner_id"
+        )
+    }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -40,4 +48,22 @@ public class Case {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = this.createdAt;
+    }
+
+    @PreUpdate
+    void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SensitivityLevel sensitivityLevel;
 }

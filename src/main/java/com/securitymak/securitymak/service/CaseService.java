@@ -9,6 +9,12 @@ import com.securitymak.securitymak.repository.CaseRepository;
 import com.securitymak.securitymak.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.securitymak.securitymak.model.SensitivityLevel;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.securitymak.securitymak.exception.CaseNotFoundException;
+import com.securitymak.securitymak.exception.InvalidCaseTransitionException;
+import com.securitymak.securitymak.exception.UnauthorizedCaseAccessException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +35,7 @@ public class CaseService {
                 .title(request.title())
                 .description(request.description())
                 .status(CaseStatus.OPEN)
+                .sensitivityLevel(SensitivityLevel.LOW)
                 .owner(currentUser)
                 .tenantId(tenantId)
                 .createdAt(LocalDateTime.now())
@@ -49,25 +56,30 @@ public class CaseService {
         return toResponse(c);
     }
 
-    private boolean isValidTransition(CaseStatus from, CaseStatus to) {
-        return switch (from) {
-            case OPEN -> to == CaseStatus.IN_REVIEW;
-            case IN_REVIEW -> to == CaseStatus.CLOSED;
-            case CLOSED -> false;
-        };
-    }
 
     public CaseResponse updateCaseStatus(Long caseId, CaseStatus newStatus) {
+
+        SecurityUtils.requireAdmin();
 
         User admin = SecurityUtils.getCurrentUser();
         Long tenantId = SecurityUtils.getCurrentTenantId();
 
         Case c = caseRepository.findById(caseId)
-                .orElseThrow(() -> new RuntimeException("Case not found"));
+        .orElseThrow(CaseNotFoundException::new);
 
-        // tenant boundary
         if (!c.getTenantId().equals(tenantId)) {
-            throw new RuntimeException("Cross-tenant access denied");
+
+            auditService.log(
+                    SecurityUtils.getCurrentUserEmail(),
+                    "CROSS_TENANT_CASE_ACCESS_ATTEMPT",
+                    "CASE",
+                    caseId,
+                    "tenant=" + c.getTenantId(),
+                    "tenant=" + tenantId,
+                    tenantId
+            );
+
+            throw new UnauthorizedCaseAccessException();
         }
 
         CaseStatus oldStatus = c.getStatus();
@@ -78,10 +90,19 @@ public class CaseService {
         }
 
         // valid transitions only
-        if (!isValidTransition(oldStatus, newStatus)) {
-            throw new RuntimeException(
-                    "Invalid status transition: " + oldStatus + " → " + newStatus
+        if (!oldStatus.canTransitionTo(newStatus)) {
+
+            auditService.log(
+                    admin.getEmail(),
+                    "INVALID_CASE_STATUS_TRANSITION",
+                    "CASE",
+                    c.getId(),
+                    oldStatus.name(),
+                    newStatus.name(),
+                    tenantId
             );
+
+            throw new InvalidCaseTransitionException();
         }
 
         c.setStatus(newStatus);
@@ -118,10 +139,31 @@ public class CaseService {
         Long tenantId = SecurityUtils.getCurrentTenantId();
 
         return caseRepository
-                .findByTenantId(tenantId)
+                .findAllByTenantId(tenantId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    public Page<CaseResponse> getMyCases(Pageable pageable) {
+
+        User user = SecurityUtils.getCurrentUser();
+        Long tenantId = SecurityUtils.getCurrentTenantId();
+
+        return caseRepository
+                .findByTenantIdAndOwnerId(tenantId, user.getId(), pageable)
+                .map(this::toResponse);
+    }
+
+    public Page<CaseResponse> getTenantCases(Pageable pageable) {
+
+        SecurityUtils.requireAdmin();
+
+        Long tenantId = SecurityUtils.getCurrentTenantId();
+
+        return caseRepository
+                .findAllByTenantId(tenantId, pageable)
+                .map(this::toResponse);
     }
 
     private CaseResponse toResponse(Case c) {
@@ -131,7 +173,8 @@ public class CaseService {
                 c.getDescription(),
                 c.getStatus(),
                 c.getOwner().getEmail(),
-                c.getCreatedAt()
+                c.getCreatedAt(),
+                c.getUpdatedAt()
         );
     }
 }
