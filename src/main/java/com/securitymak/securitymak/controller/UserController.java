@@ -13,7 +13,7 @@ public class UserController {
 
     private final UserService userService;
 
-    @GetMapping("/user/profile")
+    @GetMapping("/api/user/profile")
     @PreAuthorize("isAuthenticated()")
     public UserProfileResponse profile() {
         return userService.getCurrentUserProfile();

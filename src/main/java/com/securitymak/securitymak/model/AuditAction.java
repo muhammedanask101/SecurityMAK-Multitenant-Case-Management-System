@@ -1,0 +1,30 @@
+package com.securitymak.securitymak.model;
+
+public enum AuditAction {
+
+    // ---- CASE EVENTS ----
+    CASE_CREATED,
+    CASE_UPDATED,
+    CASE_STATUS_CHANGED,
+    CASE_SENSITIVITY_CHANGED,
+    CASE_VIEWED,
+
+    // ---- COMMENT EVENTS ----
+    COMMENT_ADDED,
+    COMMENT_DELETED,
+
+    USER_ROLE_CHANGED,
+
+    // ---- SECURITY EVENTS ----
+    CROSS_TENANT_ACCESS_ATTEMPT,
+    UNAUTHORIZED_ACCESS_ATTEMPT,
+    INSUFFICIENT_CLEARANCE_ATTEMPT,
+    INVALID_STATUS_TRANSITION,
+
+    // ---- ADMIN EVENTS ----
+    ADMIN_OVERRIDE,
+
+    USER_REGISTERED,
+    USER_LOGIN
+
+}

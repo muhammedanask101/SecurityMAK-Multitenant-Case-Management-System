@@ -1,4 +1,7 @@
 package com.securitymak.securitymak.model;
+import com.securitymak.securitymak.model.AuditAction;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,8 +26,9 @@ public class AuditLog {
     private String actorEmail;
 
     // what happened
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String action;
+    private AuditAction action;
 
     // target entity info
     private String targetType;   // USER

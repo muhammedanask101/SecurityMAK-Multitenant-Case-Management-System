@@ -5,21 +5,35 @@ public enum CaseStatus {
     OPEN {
         @Override
         public boolean canTransitionTo(CaseStatus next) {
-            return next == IN_REVIEW;
+            return next == IN_PROGRESS;
         }
     },
 
-    IN_REVIEW {
+    IN_PROGRESS {
         @Override
         public boolean canTransitionTo(CaseStatus next) {
-            return next == CLOSED;
+            return next == REVIEW;
+        }
+    },
+
+    REVIEW {
+        @Override
+        public boolean canTransitionTo(CaseStatus next) {
+            return next == CLOSED || next == IN_PROGRESS; // allow rollback
         }
     },
 
     CLOSED {
         @Override
         public boolean canTransitionTo(CaseStatus next) {
-            return false;
+            return next == ARCHIVED; // only archival allowed
+        }
+    },
+
+    ARCHIVED {
+        @Override
+        public boolean canTransitionTo(CaseStatus next) {
+            return false; // permanently locked
         }
     };
 

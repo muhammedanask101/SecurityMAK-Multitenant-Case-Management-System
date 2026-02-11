@@ -98,4 +98,5 @@ public class GlobalExceptionHandler {
     public ApiError handleBusinessRule(BusinessRuleViolationException ex) {
         return ApiError.of(400, "BUSINESS_RULE_VIOLATION", ex.getMessage());
     }
+    
 }

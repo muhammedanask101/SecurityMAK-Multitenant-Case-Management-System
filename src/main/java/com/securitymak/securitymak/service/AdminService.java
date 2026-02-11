@@ -3,6 +3,7 @@ package com.securitymak.securitymak.service;
 import com.securitymak.securitymak.dto.UserAdminView;
 import com.securitymak.securitymak.exception.BusinessRuleViolationException;
 import com.securitymak.securitymak.exception.ResourceNotFoundException;
+import com.securitymak.securitymak.model.AuditAction;
 import com.securitymak.securitymak.model.Role;
 import com.securitymak.securitymak.model.User;
 import com.securitymak.securitymak.repository.RoleRepository;
@@ -29,6 +30,16 @@ public class AdminService {
 
         Long tenantId = SecurityUtils.getCurrentTenantId();
 
+        auditService.log(
+        SecurityUtils.getCurrentUserEmail(),
+        AuditAction.ADMIN_OVERRIDE,
+        "USER_LIST",
+        null,
+        null,
+        null,
+        tenantId
+);
+
         return userRepository.findAllByTenant_Id(tenantId)
                 .stream()
                 .map(user -> new UserAdminView(
@@ -41,7 +52,7 @@ public class AdminService {
 
     public Page<AuditLogView> getAuditLogs(
             String actorEmail,
-            String action,
+            AuditAction action,
             String targetType,
             LocalDateTime from,
             LocalDateTime to,
@@ -85,7 +96,7 @@ public class AdminService {
 
         auditService.log(
                 actorEmail,
-                "CHANGE_USER_ROLE",
+                AuditAction.USER_ROLE_CHANGED,
                 "USER",
                 user.getId(),
                 oldRole,

@@ -6,5 +6,16 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class LoginResponse {
-    private String token;
+
+    private String accessToken;
+    private UserView user;
+
+    @Data
+    @AllArgsConstructor
+    public static class UserView {
+        private Long id;
+        private String email;
+        private String role;
+        private Long tenantId;
+    }
 }

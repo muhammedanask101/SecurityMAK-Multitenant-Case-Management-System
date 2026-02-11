@@ -65,4 +65,11 @@ public final class SecurityUtils {
             throw new AccessDeniedException("Cross-tenant access denied");
         }
     }
+
+    public static boolean isAdmin() {
+        User user = getCurrentUser();
+
+        return user.getRole() != null
+                && "ADMIN".equals(user.getRole().getName());
+    }
 }

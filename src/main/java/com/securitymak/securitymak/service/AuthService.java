@@ -5,7 +5,9 @@ import com.securitymak.securitymak.dto.LoginResponse;
 import com.securitymak.securitymak.dto.RegisterRequest;
 import com.securitymak.securitymak.dto.UserProfileResponse;
 import com.securitymak.securitymak.exception.*;
+import com.securitymak.securitymak.model.AuditAction;
 import com.securitymak.securitymak.model.Role;
+import com.securitymak.securitymak.model.SensitivityLevel;
 import com.securitymak.securitymak.model.Tenant;
 import com.securitymak.securitymak.model.User;
 import com.securitymak.securitymak.repository.RoleRepository;
@@ -27,33 +29,78 @@ public class AuthService {
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final AuditService auditService;
 
     public LoginResponse register(RegisterRequest request) {
 
-         Tenant tenant = tenantRepository.findByCode("DEFAULT")
-            .orElseThrow(() -> new RuntimeException("Default tenant missing"));
 
-        if (userRepository.existsByEmailAndTenant_Id(request.getEmail(), tenant.getId())) {
+        if (userRepository.existsByEmail(request.getEmail())) {
                 throw new BadRequestException("Email already registered");
         }
 
+        if (request.getOrganizationName() == null || request.getOrganizationName().isBlank()) {
+                throw new BadRequestException("Organization name is required");
+        }
 
-        Role userRole = roleRepository.findByName("USER")
-                .orElseThrow(() ->
-                        new RuntimeException("Default role USER not found"));
+        String orgName = request.getOrganizationName().trim();
+
+        String code = orgName
+                .toLowerCase()
+                .replaceAll("[^a-z0-9]", "-")
+                .replaceAll("-+", "-");
+
+        if (tenantRepository.existsByCode(code)) {
+                throw new BadRequestException("Organization code already exists");
+        }
+
+        if (tenantRepository.existsByName(request.getOrganizationName())) {
+        throw new BadRequestException("Organization name already taken");
+        }
+
+
+        Role adminRole = roleRepository.findByName("ADMIN")
+        .orElseThrow(() ->
+                new RuntimeException("Default role ADMIN not found"));
+
+        Tenant tenant = Tenant.builder()
+                .name(orgName)
+                .code(code)
+                .build();
+
+        tenantRepository.save(tenant);
 
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(userRole)
+                .role(adminRole)
                 .tenant(tenant)
+                .clearanceLevel(SensitivityLevel.CRITICAL) 
                 .build();
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
 
-        String token = jwtService.generateToken(user);
+        String token = jwtService.generateToken(savedUser);
 
-        return new LoginResponse(token);
+        auditService.log(
+        savedUser.getEmail(),
+        AuditAction.USER_REGISTERED,
+        "USER_REGISTERED",
+        savedUser.getId(),
+        null,
+        null,
+        savedUser.getTenant().getId()
+);
+
+        return new LoginResponse(
+        token,
+        new LoginResponse.UserView(
+            savedUser.getId(),
+            savedUser.getEmail(),
+            savedUser.getRole().getName(),
+            savedUser.getTenant().getId()
+        )
+    );
+
     }
     
     public LoginResponse login(LoginRequest request) {
@@ -66,7 +113,26 @@ public class AuthService {
         }
 
         String token = jwtService.generateToken(user);
-        return new LoginResponse(token);
+
+        auditService.log(
+        user.getEmail(),
+        AuditAction.USER_LOGIN,
+        "USER_LOGIN",
+        user.getId(),
+        null,
+        null,
+        user.getTenant().getId()
+);
+
+        return new LoginResponse(
+                token,
+                new LoginResponse.UserView(
+                user.getId(),
+                user.getEmail(),
+                user.getRole().getName(),
+                user.getTenant().getId()
+                )
+        );
         }
 
 }

@@ -1,0 +1,2 @@
+ALTER TABLE users
+ADD COLUMN clearance_level VARCHAR(20) NOT NULL DEFAULT 'LOW';

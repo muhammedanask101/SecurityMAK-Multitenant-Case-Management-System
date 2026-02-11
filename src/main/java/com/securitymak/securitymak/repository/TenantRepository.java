@@ -8,4 +8,7 @@ import java.util.Optional;
 public interface TenantRepository extends JpaRepository<Tenant, Long> {
 
     Optional<Tenant> findByCode(String code);
+
+    boolean existsByName(String name);
+    boolean existsByCode(String code);
 }

@@ -11,6 +11,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // 🔐 AUTHENTICATION ONLY
     Optional<User> findByEmail(String email);
 
+    boolean existsByEmail(String email);
+
     // 🔐 TENANT-SAFE METHODS (CORRECT FOR @ManyToOne Tenant)
     List<User> findAllByTenant_Id(Long tenantId);
 

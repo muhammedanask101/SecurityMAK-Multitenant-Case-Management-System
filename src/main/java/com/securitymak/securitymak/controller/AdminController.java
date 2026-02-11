@@ -1,6 +1,7 @@
 package com.securitymak.securitymak.controller;
 
 import com.securitymak.securitymak.dto.UserAdminView;
+import com.securitymak.securitymak.model.AuditAction;
 import com.securitymak.securitymak.model.Role;
 import com.securitymak.securitymak.service.AdminService;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("/api/admin")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
@@ -49,7 +50,7 @@ public class AdminController {
     @GetMapping("/audit-logs")
     public Page<AuditLogView> getAuditLogs(
             @RequestParam(required = false) String actorEmail,
-            @RequestParam(required = false) String action,
+            @RequestParam(required = false) AuditAction action,
             @RequestParam(required = false) String targetType,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)

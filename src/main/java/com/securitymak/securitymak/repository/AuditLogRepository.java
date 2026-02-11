@@ -1,5 +1,6 @@
 package com.securitymak.securitymak.repository;
 
+import com.securitymak.securitymak.model.AuditAction;
 import com.securitymak.securitymak.model.AuditLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,10 +22,10 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     );
 
     Page<AuditLog> findByTenantIdAndAction(
-            Long tenantId,
-            String action,
-            Pageable pageable
-    );
+        Long tenantId,
+        AuditAction action,
+        Pageable pageable
+);
 
     Page<AuditLog> findByTenantIdAndTargetType(
             Long tenantId,

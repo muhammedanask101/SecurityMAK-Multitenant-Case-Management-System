@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class TestController {
 
-    @GetMapping("/test/secure")
+    @GetMapping("/api/test/secure")
     public String secure(Authentication authentication) {
         return "Hello " + authentication.getName() + ", you are authenticated!";
     }

@@ -1,8 +1,11 @@
 package com.securitymak.securitymak.repository;
 
 import com.securitymak.securitymak.model.Case;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.securitymak.securitymak.model.SensitivityLevel;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -21,4 +24,21 @@ public interface CaseRepository extends JpaRepository<Case, Long> {
     
     Page<Case> findByTenantIdAndOwnerId(Long tenantId, Long ownerId, Pageable pageable);
     
+    Page<Case> findByTenantIdAndSensitivityLevelLessThanEqual(
+        Long tenantId,
+        SensitivityLevel level,
+        Pageable pageable
+    );
+
+    @Query("""
+    SELECT c
+    FROM Case c
+    WHERE c.tenantId = :tenantId
+        AND c.sensitivityLevel.level <= :clearanceLevel
+    """)
+    Page<Case> findAccessibleCases(
+            @Param("tenantId") Long tenantId,
+            @Param("clearanceLevel") int clearanceLevel,
+            Pageable pageable
+    );
 }
