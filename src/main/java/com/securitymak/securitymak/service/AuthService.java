@@ -33,7 +33,6 @@ public class AuthService {
 
     public LoginResponse register(RegisterRequest request) {
 
-
         if (userRepository.existsByEmail(request.getEmail())) {
                 throw new BadRequestException("Email already registered");
         }

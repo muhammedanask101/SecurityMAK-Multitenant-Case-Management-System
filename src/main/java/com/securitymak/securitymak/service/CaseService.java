@@ -16,10 +16,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.securitymak.securitymak.exception.CaseNotFoundException;
 import com.securitymak.securitymak.exception.InvalidCaseTransitionException;
-import com.securitymak.securitymak.exception.ResourceNotFoundException;
 import com.securitymak.securitymak.exception.UnauthorizedCaseAccessException;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.access.AccessDeniedException;
 
 
 import java.time.LocalDateTime;
@@ -140,19 +138,19 @@ public class CaseService {
 
     public List<CaseResponse> getCasesForCurrentUser() {
 
-        User currentUser = SecurityUtils.getCurrentUser();
-        Long tenantId = SecurityUtils.getCurrentTenantId();
+    User currentUser = SecurityUtils.getCurrentUser();
+    Long tenantId = SecurityUtils.getCurrentTenantId();
 
-        return caseRepository
-                .findByTenantIdAndOwnerId(tenantId, currentUser.getId())
-                .stream()
-                .filter(c ->
-                    currentUser.getClearanceLevel()
-                            .canAccess(c.getSensitivityLevel())
-                )
-                .map(this::toResponse)
-                .toList();
-    }
+    return caseRepository
+            .findByTenantIdAndOwnerId(tenantId, currentUser.getId())
+            .stream()
+            .filter(c ->
+                currentUser.getClearanceLevel()
+                        .canAccess(c.getSensitivityLevel())
+            )
+            .map(this::toResponse)
+            .toList();
+}
 
     public List<CaseResponse> getAllCasesForTenant() {
 
@@ -170,39 +168,38 @@ public class CaseService {
                 .toList();
     }
 
-    public Page<CaseResponse> getMyCases(Pageable pageable) {
+ public Page<CaseResponse> getMyCases(Pageable pageable) {
 
-        User user = SecurityUtils.getCurrentUser();
-        Long tenantId = SecurityUtils.getCurrentTenantId();
+    User user = SecurityUtils.getCurrentUser();
+    Long tenantId = SecurityUtils.getCurrentTenantId();
 
-        return caseRepository
-                .findByTenantIdAndOwnerId(tenantId, user.getId(), pageable)
-                .map(c -> {
-                    if (!user.getClearanceLevel()
+    return caseRepository
+            .findByTenantIdAndOwnerId(tenantId, user.getId(), pageable)
+            .map(c -> {
+                if (!user.getClearanceLevel()
                         .canAccess(c.getSensitivityLevel())) {
-                        throw new UnauthorizedCaseAccessException("Insufficient clearance level");
-                    }
-                    return toResponse(c);
-                });
-    }
+                    throw new UnauthorizedCaseAccessException("Insufficient clearance");
+                }
+                return toResponse(c);
+            });
+}
 
-    public Page<CaseResponse> getTenantCases(Pageable pageable) {
+public Page<CaseResponse> getTenantCases(Pageable pageable) {
 
-        SecurityUtils.requireAdmin();
+    SecurityUtils.requireAdmin();
 
-        User user = SecurityUtils.getCurrentUser();
-        Long tenantId = SecurityUtils.getCurrentTenantId();
+    User user = SecurityUtils.getCurrentUser();
+    Long tenantId = SecurityUtils.getCurrentTenantId();
 
-        return caseRepository
-                .findAllByTenantId(tenantId, pageable)
-                .map(c -> {
-                    if (!user.getClearanceLevel()
-                        .canAccess(c.getSensitivityLevel())) {
-                        throw new UnauthorizedCaseAccessException("Insufficient clearance level");
-                    }
-                    return toResponse(c);
-                });
-    }
+    return caseRepository
+            .findByTenantIdAndSensitivityLevelLessThanEqual(
+                    tenantId,
+                    user.getClearanceLevel(),
+                    pageable
+            )
+            .map(this::toResponse);
+}
+                
 
     private CaseResponse toResponse(Case c) {
         return new CaseResponse(
@@ -210,6 +207,7 @@ public class CaseService {
                 c.getTitle(),
                 c.getDescription(),
                 c.getStatus(),
+                c.getSensitivityLevel(),  
                 c.getOwner().getEmail(),
                 c.getCreatedAt(),
                 c.getUpdatedAt()
@@ -295,17 +293,15 @@ public CaseResponse getCaseById(Long caseId) {
 
 public Page<CaseResponse> listCases(Pageable pageable) {
 
-    User user = SecurityUtils.getCurrentUser();
+    SecurityUtils.requireAdmin();
+
     Long tenantId = SecurityUtils.getCurrentTenantId();
 
     return caseRepository
-            .findAccessibleCases(
-                    tenantId,
-                    user.getClearanceLevel().getLevel(),
-                    pageable
-            )
+            .findAllByTenantId(tenantId, pageable)
             .map(this::toResponse);
 }
+
 @Transactional
 public CaseResponse updateCaseSensitivity(Long caseId, SensitivityLevel newLevel) {
 

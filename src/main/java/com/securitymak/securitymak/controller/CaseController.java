@@ -48,14 +48,6 @@ public class CaseController {
         return caseService.updateCaseStatus(caseId, request.newStatus());
     }
 
-    @GetMapping("/my")
-    @PreAuthorize("isAuthenticated()")
-    public Page<CaseResponse> myCasesPaged(
-            @PageableDefault(size = 10, sort = "createdAt") Pageable pageable
-    ) {
-        return caseService.getMyCases(pageable);
-    }
-
     @GetMapping("/paged")
     @PreAuthorize("hasRole('ADMIN')")
     public Page<CaseResponse> allCasesPaged(

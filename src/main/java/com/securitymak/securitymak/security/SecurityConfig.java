@@ -36,10 +36,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/error").permitAll()
-                .requestMatchers("/cases/**").authenticated()
-                .requestMatchers("/admin/**").hasRole("ADMIN")
-                .requestMatchers("/user/**").authenticated()
-                .requestMatchers("/test/secure").authenticated()
+                .requestMatchers("/api/**").authenticated()
                 .anyRequest().denyAll()
             )
             .addFilterBefore(

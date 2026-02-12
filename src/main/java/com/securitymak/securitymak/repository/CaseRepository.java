@@ -29,16 +29,4 @@ public interface CaseRepository extends JpaRepository<Case, Long> {
         SensitivityLevel level,
         Pageable pageable
     );
-
-    @Query("""
-    SELECT c
-    FROM Case c
-    WHERE c.tenantId = :tenantId
-        AND c.sensitivityLevel.level <= :clearanceLevel
-    """)
-    Page<Case> findAccessibleCases(
-            @Param("tenantId") Long tenantId,
-            @Param("clearanceLevel") int clearanceLevel,
-            Pageable pageable
-    );
 }
