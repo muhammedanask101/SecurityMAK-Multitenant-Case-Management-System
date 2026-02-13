@@ -49,4 +49,6 @@ public enum AuditAction {
     INVALID_INVITE_TOKEN_USED,
     INVITE_EMAIL_MISMATCH,
 
+    BAD_PASSWORD,
+
 }

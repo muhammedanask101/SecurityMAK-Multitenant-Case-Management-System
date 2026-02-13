@@ -6,7 +6,15 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "invites")
+@Table(
+    name = "invites",
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uq_invite_email_tenant_pending",
+            columnNames = {"email", "tenant_id", "status"}
+        )
+    }
+)
 @Getter
 @Setter
 @Builder

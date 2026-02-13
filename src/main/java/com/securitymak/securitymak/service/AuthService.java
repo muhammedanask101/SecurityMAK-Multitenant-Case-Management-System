@@ -34,6 +34,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuditService auditService;
     private final EmailBanRepository emailBanRepository;
+    private final LoginAttemptService loginAttemptService;
 
     public LoginResponse register(RegisterRequest request) {
 
@@ -111,18 +112,62 @@ public class AuthService {
     
     public LoginResponse login(LoginRequest request) {
 
+        if (loginAttemptService.isLocked(request.getEmail())) {
+                throw new UnauthorizedException(
+                        "Too many failed login attempts. Try later."
+                );
+        }
+
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
+        .orElse(null);
+
+        if (user == null) {
+
+        loginAttemptService.loginFailed(request.getEmail());
+
+        throw new UnauthorizedException("Invalid credentials");
+        }
+
+         if (!user.isEnabled()) {
+
+                auditService.log(
+                        user.getEmail(),
+                        AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
+                        "USER",
+                        user.getId(),
+                        "DISABLED_USER_LOGIN_ATTEMPT",
+                        null,
+                        user.getTenant().getId()
+                );
+
+                throw new UnauthorizedException("Account disabled");
+        }
 
         checkIfEmailBanned(
-        user.getEmail(),
-        user.getTenant().getId(),
-        AuditAction.BANNED_USER_ATTEMPTED_LOGIN
-);
+                user.getEmail(),
+                user.getTenant().getId(),
+                AuditAction.BANNED_USER_ATTEMPTED_LOGIN
+        );
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                throw new UnauthorizedException("Invalid credentials");
-        }
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+
+        // 🔴 THIS IS WHERE YOU PASTE loginFailed()
+        loginAttemptService.loginFailed(user.getEmail());
+
+        auditService.log(
+                user.getEmail(),
+                AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
+                "USER",
+                user.getId(),
+                "BAD_PASSWORD",
+                null,
+                user.getTenant().getId()
+        );
+
+        throw new UnauthorizedException("Invalid credentials");
+    }
+
+    loginAttemptService.loginSucceeded(user.getEmail());
 
         String token = jwtService.generateToken(user);
 

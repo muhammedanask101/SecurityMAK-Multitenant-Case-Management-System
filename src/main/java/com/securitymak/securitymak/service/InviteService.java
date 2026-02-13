@@ -29,7 +29,7 @@ private final PasswordEncoder passwordEncoder;
 private final EmailBanRepository emailBanRepository;
 
     @Transactional
-    public Invite createInvite(
+    public InviteView createInvite(
             String email,
             String roleName,
             SensitivityLevel clearanceLevel
@@ -66,7 +66,7 @@ private final EmailBanRepository emailBanRepository;
                 currentAdmin.getTenant().getId()
         );
 
-        return saved;
+        return toView(saved);
     }
 
     @Transactional
@@ -112,10 +112,15 @@ public void registerViaInvite(
         String email,
         String rawPassword
 ) {
+        
 
     Invite invite = inviteRepository.findByToken(token)
             .orElseThrow(() ->
                     new BadRequestException("Invalid invite token"));
+
+        if (invite.getStatus() == InviteStatus.REGISTERED) {
+                throw new BadRequestException("Already registered. Awaiting approval.");
+        }
 
     if (invite.getStatus() != InviteStatus.PENDING) {
         auditService.log(
@@ -311,6 +316,27 @@ public org.springframework.data.domain.Page<InviteView> getInvites(
     }
 
     return page.map(this::toView);
+}
+
+@Transactional(readOnly = true)
+public InviteView getInviteById(Long inviteId) {
+
+    User currentUser = SecurityUtils.getCurrentUser();
+
+    if (!"ADMIN".equals(currentUser.getRole().getName())) {
+        throw new UnauthorizedException("Only ADMIN can view invite details");
+    }
+
+    Invite invite = inviteRepository.findById(inviteId)
+            .orElseThrow(() ->
+                    new BadRequestException("Invite not found"));
+
+    if (!invite.getTenant().getId()
+            .equals(currentUser.getTenant().getId())) {
+        throw new UnauthorizedException("Cross-tenant access denied");
+    }
+
+    return toView(invite);
 }
 
 private InviteView toView(Invite invite) {

@@ -17,7 +17,7 @@ public class InviteController {
     private final InviteService inviteService;
 
     @PostMapping
-    public Invite createInvite(@RequestBody CreateInviteRequest request) {
+    public InviteView createInvite(@RequestBody CreateInviteRequest request) {
         return inviteService.createInvite(
                 request.getEmail(),
                 request.getRole(),
@@ -69,5 +69,10 @@ public org.springframework.data.domain.Page<InviteView> listInvites(
         org.springframework.data.domain.Pageable pageable
 ) {
     return inviteService.getInvites(status, pageable);
+}
+
+@GetMapping("/{id}")
+public InviteView getInvite(@PathVariable Long id) {
+    return inviteService.getInviteById(id);
 }
 }
