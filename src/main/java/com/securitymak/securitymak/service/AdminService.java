@@ -4,6 +4,7 @@ import com.securitymak.securitymak.dto.UserAdminView;
 import com.securitymak.securitymak.exception.BusinessRuleViolationException;
 import com.securitymak.securitymak.exception.ResourceNotFoundException;
 import com.securitymak.securitymak.exception.UnauthorizedCaseAccessException;
+import com.securitymak.securitymak.exception.UnauthorizedException;
 import com.securitymak.securitymak.model.AuditAction;
 import com.securitymak.securitymak.model.Role;
 import com.securitymak.securitymak.model.SensitivityLevel;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import com.securitymak.securitymak.dto.AuditLogView;
 import com.securitymak.securitymak.dto.UpdateClearanceRequest;
 import org.springframework.transaction.annotation.Transactional;
+import com.securitymak.securitymak.exception.BadRequestException;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -166,6 +168,86 @@ public class AdminService {
 
         return toAdminView(targetUser);
         }
+
+        @Transactional
+public void disableUser(Long userId) {
+
+    User currentAdmin = SecurityUtils.getCurrentUser();
+
+    if (!"ADMIN".equals(currentAdmin.getRole().getName())) {
+        throw new UnauthorizedException("Only ADMIN allowed");
+    }
+
+    User target = userRepository.findById(userId)
+            .orElseThrow(() -> new BadRequestException("User not found"));
+
+            // Prevent disabling last ADMIN
+if ("ADMIN".equals(target.getRole().getName())) {
+
+    long adminCount = userRepository
+            .countByTenant_IdAndRole_Name(
+                    currentAdmin.getTenant().getId(),
+                    "ADMIN"
+            );
+
+    if (adminCount <= 1) {
+        throw new BadRequestException(
+                "Cannot disable the last ADMIN"
+        );
+    }
+}
+
+    if (!target.getTenant().getId()
+            .equals(currentAdmin.getTenant().getId())) {
+        throw new UnauthorizedException("Cross-tenant access denied");
+    }
+
+    if (target.getId().equals(currentAdmin.getId())) {
+        throw new BadRequestException("Cannot disable yourself");
+    }
+
+    target.setEnabled(false);
+
+    auditService.log(
+            currentAdmin.getEmail(),
+            AuditAction.USER_DISABLED,
+            "USER",
+            target.getId(),
+            "ENABLED=true",
+            "ENABLED=false",
+            currentAdmin.getTenant().getId()
+    );
+}
+
+@Transactional
+public void enableUser(Long userId) {
+
+    User currentAdmin = SecurityUtils.getCurrentUser();
+
+    if (!"ADMIN".equals(currentAdmin.getRole().getName())) {
+        throw new UnauthorizedException("Only ADMIN allowed");
+    }
+
+    User target = userRepository.findById(userId)
+            .orElseThrow(() -> new BadRequestException("User not found"));
+
+    if (!target.getTenant().getId()
+            .equals(currentAdmin.getTenant().getId())) {
+        throw new UnauthorizedException("Cross-tenant access denied");
+    }
+
+    target.setEnabled(true);
+
+    auditService.log(
+            currentAdmin.getEmail(),
+            AuditAction.USER_REENABLED,
+            "USER",
+            target.getId(),
+            "ENABLED=false",
+            "ENABLED=true",
+            currentAdmin.getTenant().getId()
+    );
+}
 }
 
 

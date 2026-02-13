@@ -88,4 +88,14 @@ public class AdminController {
     ) {
         return adminService.updateUserClearance(id, request);
     }
+
+    @PostMapping("/users/{id}/disable")
+public void disableUser(@PathVariable Long id) {
+    adminService.disableUser(id);
+}
+
+@PostMapping("/users/{id}/enable")
+public void enableUser(@PathVariable Long id) {
+    adminService.enableUser(id);
+}
 }

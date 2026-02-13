@@ -20,5 +20,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmailAndTenant_Id(String email, Long tenantId);
 
+    long countByTenant_IdAndRole_Name(Long tenantId, String roleName);
+
     boolean existsByEmailAndTenant_Id(String email, Long tenantId);
 }

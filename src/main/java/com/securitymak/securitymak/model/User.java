@@ -40,6 +40,13 @@ public class User implements UserDetails {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
+    @Column(nullable = false)
+    private boolean enabled = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "joined_via_invite_id")
+    private Invite joinedViaInvite;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(
@@ -68,7 +75,7 @@ public class User implements UserDetails {
     }
 
     @Override
-    public boolean isEnabled() {
-        return true;
-    }
+public boolean isEnabled() {
+    return enabled;
+}
 }

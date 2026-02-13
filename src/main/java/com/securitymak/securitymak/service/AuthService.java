@@ -11,6 +11,7 @@ import com.securitymak.securitymak.model.Role;
 import com.securitymak.securitymak.model.SensitivityLevel;
 import com.securitymak.securitymak.model.Tenant;
 import com.securitymak.securitymak.model.User;
+import com.securitymak.securitymak.repository.EmailBanRepository;
 import com.securitymak.securitymak.repository.RoleRepository;
 import com.securitymak.securitymak.repository.UserRepository;
 import com.securitymak.securitymak.repository.TenantRepository;
@@ -32,6 +33,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuditService auditService;
+    private final EmailBanRepository emailBanRepository;
 
     public LoginResponse register(RegisterRequest request) {
 
@@ -75,7 +77,8 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(adminRole)
                 .tenant(tenant)
-                .clearanceLevel(SensitivityLevel.CRITICAL) 
+                .clearanceLevel(SensitivityLevel.CRITICAL)
+                .enabled(true)  
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -110,6 +113,12 @@ public class AuthService {
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
+
+        checkIfEmailBanned(
+        user.getEmail(),
+        user.getTenant().getId(),
+        AuditAction.BANNED_USER_ATTEMPTED_LOGIN
+);
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                 throw new UnauthorizedException("Invalid credentials");
@@ -177,6 +186,30 @@ public class AuthService {
                 currentUser.getTenant().getId()
         );
         }
+
+private void checkIfEmailBanned(
+        String email,
+        Long tenantId,
+        AuditAction action
+) {
+
+    if (emailBanRepository.existsByEmailAndTenant_Id(email, tenantId)) {
+
+        auditService.log(
+                email,
+                action,
+                "USER",
+                null,
+                null,
+                "TENANT_BAN",
+                tenantId
+        );
+
+        throw new UnauthorizedException(
+                "This email is banned for this organization"
+        );
+    }
+}
 
 }
 
