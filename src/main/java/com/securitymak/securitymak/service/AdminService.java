@@ -3,8 +3,10 @@ package com.securitymak.securitymak.service;
 import com.securitymak.securitymak.dto.UserAdminView;
 import com.securitymak.securitymak.exception.BusinessRuleViolationException;
 import com.securitymak.securitymak.exception.ResourceNotFoundException;
+import com.securitymak.securitymak.exception.UnauthorizedCaseAccessException;
 import com.securitymak.securitymak.model.AuditAction;
 import com.securitymak.securitymak.model.Role;
+import com.securitymak.securitymak.model.SensitivityLevel;
 import com.securitymak.securitymak.model.User;
 import com.securitymak.securitymak.repository.RoleRepository;
 import com.securitymak.securitymak.repository.UserRepository;
@@ -12,6 +14,9 @@ import com.securitymak.securitymak.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.securitymak.securitymak.dto.AuditLogView;
+import com.securitymak.securitymak.dto.UpdateClearanceRequest;
+import org.springframework.transaction.annotation.Transactional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -45,7 +50,9 @@ public class AdminService {
                 .map(user -> new UserAdminView(
                         user.getId(),
                         user.getEmail(),
-                        user.getRole().getName()
+                        user.getRole().getName(),
+                        user.getClearanceLevel(),
+                        user.getTenant().getName()
                 ))
                 .toList();
     }
@@ -108,6 +115,57 @@ public class AdminService {
     public List<Role> getAllRoles() {
         return roleRepository.findAll();
     }
+
+    private UserAdminView toAdminView(User user) {
+    return new UserAdminView(
+            user.getId(),
+            user.getEmail(),
+            user.getRole().getName(),
+            user.getClearanceLevel(),
+            user.getTenant().getName()
+    );
+}
+
+        @Transactional
+        public UserAdminView updateUserClearance(
+                Long userId,
+                UpdateClearanceRequest request
+        ) {
+
+        SecurityUtils.requireAdmin();
+
+        User currentAdmin = SecurityUtils.getCurrentUser();
+
+        User targetUser = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
+
+        // 🔐 Tenant isolation
+        if (!targetUser.getTenant().getId()
+                .equals(currentAdmin.getTenant().getId())) {
+                throw new UnauthorizedCaseAccessException(
+                        "Cross-tenant modification attempt"
+                );
+        }
+
+        SensitivityLevel oldLevel = targetUser.getClearanceLevel();
+
+        targetUser.setClearanceLevel(request.clearanceLevel());
+
+        userRepository.save(targetUser);
+
+        auditService.log(
+                currentAdmin.getEmail(),
+                AuditAction.CLEARANCE_UPDATED,
+                "USER",
+                userId,
+                oldLevel.name(),
+                request.clearanceLevel().name(),
+                currentAdmin.getTenant().getId()
+        );
+
+        return toAdminView(targetUser);
+        }
 }
 
 

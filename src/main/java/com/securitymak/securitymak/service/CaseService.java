@@ -9,15 +9,20 @@ import com.securitymak.securitymak.model.CaseStatus;
 import com.securitymak.securitymak.model.User;
 import com.securitymak.securitymak.repository.CaseRepository;
 import com.securitymak.securitymak.security.SecurityUtils;
+import com.securitymak.securitymak.specification.CaseSpecification;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.securitymak.securitymak.model.SensitivityLevel;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import com.securitymak.securitymak.exception.CaseNotFoundException;
 import com.securitymak.securitymak.exception.InvalidCaseTransitionException;
 import com.securitymak.securitymak.exception.UnauthorizedCaseAccessException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 
 import java.time.LocalDateTime;
@@ -291,14 +296,51 @@ public CaseResponse getCaseById(Long caseId) {
     return toResponse(c);
 }
 
-public Page<CaseResponse> listCases(Pageable pageable) {
+
+public Page<CaseResponse> listCases(
+        String title,
+        CaseStatus status,
+        SensitivityLevel sensitivity,
+        Pageable pageable
+) {
 
     SecurityUtils.requireAdmin();
 
     Long tenantId = SecurityUtils.getCurrentTenantId();
 
+    Specification<Case> spec = Specification
+            .where(CaseSpecification.belongsToTenant(tenantId));
+
+    // 🔥 ONLY apply clearance restriction if NOT admin
+    if (!SecurityUtils.isAdmin()) {
+        SensitivityLevel clearance =
+                SecurityUtils.getCurrentUser().getClearanceLevel();
+
+        spec = spec.and(
+                CaseSpecification.sensitivityLessThanEqual(clearance)
+        );
+    }
+
+    if (title != null && !title.isBlank()) {
+        spec = spec.and(CaseSpecification.titleContains(title));
+    }
+
+    if (status != null) {
+        spec = spec.and(CaseSpecification.hasStatus(status));
+    }
+
+    if (sensitivity != null) {
+        spec = spec.and(CaseSpecification.hasSensitivity(sensitivity));
+    }
+
+    Pageable sorted = PageRequest.of(
+            pageable.getPageNumber(),
+            pageable.getPageSize(),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+    );
+
     return caseRepository
-            .findAllByTenantId(tenantId, pageable)
+            .findAll(spec, sorted)
             .map(this::toResponse);
 }
 

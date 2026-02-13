@@ -1,7 +1,11 @@
 package com.securitymak.securitymak.dto;
 
+import com.securitymak.securitymak.model.SensitivityLevel;
+
 public record UserAdminView(
         Long id,
         String email,
-        String role
+        String role,
+        SensitivityLevel clearanceLevel,
+        String organizationName
 ) {}

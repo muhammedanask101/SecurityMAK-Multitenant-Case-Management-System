@@ -25,6 +25,10 @@ public enum AuditAction {
     ADMIN_OVERRIDE,
 
     USER_REGISTERED,
-    USER_LOGIN
+    USER_LOGIN,
+
+    PASSWORD_CHANGED,
+
+    CLEARANCE_UPDATED
 
 }

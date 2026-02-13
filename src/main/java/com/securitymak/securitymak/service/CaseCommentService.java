@@ -78,26 +78,29 @@ public class CaseCommentService {
         return toResponse(comment);
     }
 
-   public List<CommentResponse> getCommentsForCase(Long caseId) {
+  public List<CommentResponse> getCommentsForCase(Long caseId) {
 
-        User currentUser = SecurityUtils.getCurrentUser();
+    User currentUser = SecurityUtils.getCurrentUser();
 
-        Case c = caseRepository.findById(caseId)
-                .orElseThrow(CaseNotFoundException::new);
+    Case c = caseRepository.findById(caseId)
+            .orElseThrow(CaseNotFoundException::new);
 
-        caseAccessService.validateTenantAccess(c);
-        caseAccessService.validateCaseAccess(c, currentUser);
+    caseAccessService.validateTenantAccess(c);
+    caseAccessService.validateCaseAccess(c, currentUser);
 
-        return caseCommentRepository
-                .findAccessibleComments(
-                        caseId,
-                        SecurityUtils.getCurrentTenantId(),
-                        currentUser.getClearanceLevel()
-                )
-                .stream()
-                .map(this::toResponse)
-                .toList();
-    }
+    return caseCommentRepository
+            .findAllCommentsForCase(
+                    caseId,
+                    SecurityUtils.getCurrentTenantId()
+            )
+            .stream()
+            .filter(comment ->
+                    currentUser.getClearanceLevel()
+                            .canAccess(comment.getSensitivityLevel())
+            )
+            .map(this::toResponse)
+            .toList();
+}
 
     private CommentResponse toResponse(CaseComment comment) {
         return new CommentResponse(

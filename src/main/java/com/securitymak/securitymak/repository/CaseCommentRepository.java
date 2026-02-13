@@ -10,17 +10,17 @@ import java.util.List;
 
 public interface CaseCommentRepository extends JpaRepository<CaseComment, Long> {
 
-    @Query("""
+@Query("""
     SELECT c
     FROM CaseComment c
-    WHERE c.caseEntity.id = :caseId
-      AND c.caseEntity.tenantId = :tenantId
-      AND c.sensitivityLevel <= :clearance
+    JOIN FETCH c.author a
+    JOIN FETCH c.caseEntity ce
+    WHERE ce.id = :caseId
+      AND ce.tenantId = :tenantId
     ORDER BY c.createdAt ASC
 """)
-List<CaseComment> findAccessibleComments(
+List<CaseComment> findAllCommentsForCase(
         @Param("caseId") Long caseId,
-        @Param("tenantId") Long tenantId,
-        @Param("clearance") SensitivityLevel clearance
+        @Param("tenantId") Long tenantId
 );
 }

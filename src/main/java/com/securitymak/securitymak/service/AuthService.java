@@ -1,5 +1,6 @@
 package com.securitymak.securitymak.service;
 
+import com.securitymak.securitymak.dto.ChangePasswordRequest;
 import com.securitymak.securitymak.dto.LoginRequest;
 import com.securitymak.securitymak.dto.LoginResponse;
 import com.securitymak.securitymak.dto.RegisterRequest;
@@ -19,6 +20,7 @@ import com.securitymak.securitymak.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -96,7 +98,9 @@ public class AuthService {
             savedUser.getId(),
             savedUser.getEmail(),
             savedUser.getRole().getName(),
-            savedUser.getTenant().getId()
+            savedUser.getTenant().getId(),
+            user.getTenant().getName(),
+            savedUser.getClearanceLevel()  
         )
     );
 
@@ -129,8 +133,48 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getRole().getName(),
-                user.getTenant().getId()
+                user.getTenant().getId(),
+                user.getTenant().getName(),
+                user.getClearanceLevel()  
                 )
+        );
+        }
+
+        @Transactional
+        public void changePassword(ChangePasswordRequest request) {
+
+        User currentUser = SecurityUtils.getCurrentUser();
+
+        // Verify current password
+        if (!passwordEncoder.matches(
+                request.currentPassword(),
+                currentUser.getPassword()
+        )) {
+                throw new UnauthorizedException("Current password is incorrect");
+        }
+
+        // Prevent same password reuse
+        if (passwordEncoder.matches(
+                request.newPassword(),
+                currentUser.getPassword()
+        )) {
+                throw new BadRequestException("New password must be different");
+        }
+
+        currentUser.setPassword(
+                passwordEncoder.encode(request.newPassword())
+        );
+
+        userRepository.save(currentUser);
+
+        auditService.log(
+                currentUser.getEmail(),
+                AuditAction.PASSWORD_CHANGED,
+                "USER",
+                currentUser.getId(),
+                null,
+                null,
+                currentUser.getTenant().getId()
         );
         }
 

@@ -4,15 +4,21 @@ import com.securitymak.securitymak.dto.UserAdminView;
 import com.securitymak.securitymak.model.AuditAction;
 import com.securitymak.securitymak.model.Role;
 import com.securitymak.securitymak.service.AdminService;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.securitymak.securitymak.dto.AuditLogView;
+import com.securitymak.securitymak.dto.UpdateClearanceRequest;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -58,6 +64,10 @@ public class AdminController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
             LocalDateTime to,
+            @PageableDefault(
+                    sort = "timestamp",
+                    direction = Sort.Direction.DESC
+            )
             Pageable pageable
     ) {
         return adminService.getAuditLogs(
@@ -68,5 +78,14 @@ public class AdminController {
                 to,
                 pageable
         );
+    }
+
+    @PutMapping("/api/admin/users/{id}/clearance")
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserAdminView updateClearance(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateClearanceRequest request
+    ) {
+        return adminService.updateUserClearance(id, request);
     }
 }

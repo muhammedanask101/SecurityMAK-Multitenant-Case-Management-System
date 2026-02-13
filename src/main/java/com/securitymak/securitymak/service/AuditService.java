@@ -8,7 +8,9 @@ import com.securitymak.securitymak.security.SecurityUtils;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 
@@ -43,58 +45,71 @@ public class AuditService {
         auditLogRepository.save(log);
     }
 
-    // 🔍 Paginated and filtered audit access
-    public Page<AuditLogView> getAuditLogs(
-            String actorEmail,
-            AuditAction action,
-            String targetType,
-            LocalDateTime from,
-            LocalDateTime to,
-            Pageable pageable
-    ) {
-
-        Long tenantId = SecurityUtils.getCurrentTenantId();
-
-        Page<AuditLog> page;
-
-        if (actorEmail != null) {
-            page = auditLogRepository
-                    .findByTenantIdAndActorEmailContainingIgnoreCase(
-                            tenantId, actorEmail, pageable);
-
-        } else if (action != null) {
-            page = auditLogRepository
-                    .findByTenantIdAndAction(
-                            tenantId, action, pageable);
-
-        } else if (targetType != null) {
-            page = auditLogRepository
-                    .findByTenantIdAndTargetType(
-                            tenantId, targetType, pageable);
-
-        } else if (from != null && to != null) {
-            page = auditLogRepository
-                    .findByTenantIdAndTimestampBetween(
-                            tenantId, from, to, pageable);
-
-        } else {
-            page = auditLogRepository
-                    .findByTenantId(tenantId, pageable);
-        }
-
-        return page.map(this::toView);
-    }
-
     private AuditLogView toView(AuditLog log) {
-        return new AuditLogView(
-                log.getId(),
-                log.getActorEmail(),
-                log.getAction().name(),
-                log.getTargetType(),
-                log.getTargetId(),
-                log.getOldValue(),
-                log.getNewValue(),
-                log.getTimestamp()
+    return new AuditLogView(
+            log.getId(),
+            log.getActorEmail(),
+            log.getAction().name(),
+            log.getTargetType(),
+            log.getTargetId(),
+            log.getOldValue(),
+            log.getNewValue(),
+            log.getTimestamp()
+    );
+}
+
+    // 🔍 Paginated and filtered audit access
+public Page<AuditLogView> getAuditLogs(
+        String actorEmail,
+        AuditAction action,
+        String targetType,
+        LocalDateTime from,
+        LocalDateTime to,
+        Pageable pageable
+) {
+
+    Long tenantId = SecurityUtils.getCurrentTenantId();
+
+    Specification<AuditLog> spec = (root, query, cb) ->
+            cb.equal(root.get("tenantId"), tenantId);
+
+    if (actorEmail != null && !actorEmail.isBlank()) {
+        spec = spec.and((root, query, cb) ->
+                cb.like(
+                        cb.lower(root.get("actorEmail")),
+                        "%" + actorEmail.toLowerCase() + "%"
+                )
         );
     }
+
+    if (action != null) {
+        spec = spec.and((root, query, cb) ->
+                cb.equal(root.get("action"), action)
+        );
+    }
+
+    if (targetType != null && !targetType.isBlank()) {
+        spec = spec.and((root, query, cb) ->
+                cb.equal(root.get("targetType"), targetType)
+        );
+    }
+
+    if (from != null && to != null) {
+        spec = spec.and((root, query, cb) ->
+                cb.between(root.get("timestamp"), from, to)
+        );
+    }
+
+    // Enforce newest-first ordering
+    Pageable sortedPageable = PageRequest.of(
+            pageable.getPageNumber(),
+            pageable.getPageSize(),
+            Sort.by(Sort.Direction.DESC, "timestamp")
+    );
+
+    Page<AuditLog> page =
+            auditLogRepository.findAll(spec, sortedPageable);
+
+    return page.map(this::toView);
+}
 }

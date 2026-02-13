@@ -1,5 +1,6 @@
 package com.securitymak.securitymak.dto;
 
+import com.securitymak.securitymak.model.SensitivityLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -17,5 +18,7 @@ public class LoginResponse {
         private String email;
         private String role;
         private Long tenantId;
+        private String organizationName;
+        private SensitivityLevel clearanceLevel;
     }
 }

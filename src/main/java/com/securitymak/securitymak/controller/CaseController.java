@@ -4,6 +4,7 @@ import com.securitymak.securitymak.dto.CaseResponse;
 import com.securitymak.securitymak.dto.CreateCaseRequest;
 import com.securitymak.securitymak.dto.UpdateCaseRequest;
 import com.securitymak.securitymak.dto.UpdateCaseStatusRequest;
+import com.securitymak.securitymak.model.CaseStatus;
 import com.securitymak.securitymak.model.SensitivityLevel;
 import com.securitymak.securitymak.service.CaseService;
 
@@ -15,10 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import com.securitymak.securitymak.dto.UpdateCaseRequest;
-import com.securitymak.securitymak.model.SensitivityLevel;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/cases")
@@ -83,9 +81,12 @@ public class CaseController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public Page<CaseResponse> listCases(
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) CaseStatus status,
+            @RequestParam(required = false) SensitivityLevel sensitivity,
+            @PageableDefault(size = 20) Pageable pageable
     ) {
-        return caseService.listCases(pageable);
+        return caseService.listCases(title, status, sensitivity, pageable);
     }
 
     @GetMapping("/my")
