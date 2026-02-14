@@ -78,15 +78,19 @@ public class CaseCommentService {
         return toResponse(comment);
     }
 
-  public List<CommentResponse> getCommentsForCase(Long caseId) {
+public List<CommentResponse> getCommentsForCase(Long caseId) {
 
     User currentUser = SecurityUtils.getCurrentUser();
+    boolean isAdmin = SecurityUtils.isAdmin();
 
     Case c = caseRepository.findById(caseId)
             .orElseThrow(CaseNotFoundException::new);
 
     caseAccessService.validateTenantAccess(c);
-    caseAccessService.validateCaseAccess(c, currentUser);
+
+    if (!isAdmin) {
+        caseAccessService.validateCaseAccess(c, currentUser);
+    }
 
     return caseCommentRepository
             .findAllCommentsForCase(
@@ -94,10 +98,11 @@ public class CaseCommentService {
                     SecurityUtils.getCurrentTenantId()
             )
             .stream()
-            .filter(comment ->
-                    currentUser.getClearanceLevel()
-                            .canAccess(comment.getSensitivityLevel())
-            )
+                .filter(comment ->
+                        SecurityUtils.isAdmin() ||
+                        currentUser.getClearanceLevel()
+                                .canAccess(comment.getSensitivityLevel())
+                )
             .map(this::toResponse)
             .toList();
 }

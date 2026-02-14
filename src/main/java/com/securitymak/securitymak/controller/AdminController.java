@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.securitymak.securitymak.dto.AuditLogView;
 import com.securitymak.securitymak.dto.UpdateClearanceRequest;
+import com.securitymak.securitymak.dto.UpdateRoleRequest;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,18 +37,13 @@ public class AdminController {
         return adminService.getAllUsers();
     }
 
-    @PutMapping("/users/{userId}/role")
-    public String updateUserRole(
-            @PathVariable Long userId,
-            @RequestParam String roleName
-    ) {
-        if (roleName == null || roleName.isBlank()) {
-            throw new IllegalArgumentException("roleName is required");
-        }
-        adminService.updateUserRole(userId, roleName);
-        return "Role updated successfully";
-    }
-    
+@PutMapping("/users/{userId}/role")
+public UserAdminView updateUserRole(
+        @PathVariable Long userId,
+        @RequestBody UpdateRoleRequest request
+) {
+    return adminService.updateUserRole(userId, request.role());
+}
     @GetMapping("/roles")
     public List<Role> getAllRoles() {
         return adminService.getAllRoles();
@@ -80,8 +76,7 @@ public class AdminController {
         );
     }
 
-    @PutMapping("/api/admin/users/{id}/clearance")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/users/{id}/clearance")
     public UserAdminView updateClearance(
             @PathVariable Long id,
             @Valid @RequestBody UpdateClearanceRequest request

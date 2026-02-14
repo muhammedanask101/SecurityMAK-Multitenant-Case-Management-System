@@ -14,6 +14,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
 
 import java.time.Instant;
 
@@ -35,7 +40,30 @@ private final EmailBanRepository emailBanRepository;
             SensitivityLevel clearanceLevel
     ) {
 
+        
+        email = email.trim().toLowerCase();
+
+        if (email == null || email.isBlank()) {
+                throw new BadRequestException("Email is required");
+        }
+
         User currentAdmin = SecurityUtils.getCurrentUser();
+
+        if (userRepository.existsByEmail(email)) {
+    throw new BadRequestException("User already exists");
+}
+
+        boolean activeInviteExists = inviteRepository
+                .existsByEmailAndTenant_IdAndStatus(
+                        email,
+                        currentAdmin.getTenant().getId(),
+                        InviteStatus.PENDING
+                );
+
+        if (activeInviteExists) {
+        throw new BadRequestException("Pending invite already exists for this email");
+        }
+
 
         if (!"ADMIN".equals(currentAdmin.getRole().getName())) {
             throw new UnauthorizedException("Only ADMIN can create invites");
@@ -292,9 +320,9 @@ public void rejectInvite(Long inviteId) {
     );
 }
 
-public org.springframework.data.domain.Page<InviteView> getInvites(
+public Page<InviteView> getInvites(
         InviteStatus status,
-        org.springframework.data.domain.Pageable pageable
+        Pageable pageable
 ) {
 
     User currentUser = SecurityUtils.getCurrentUser();
@@ -305,14 +333,22 @@ public org.springframework.data.domain.Page<InviteView> getInvites(
 
     Long tenantId = currentUser.getTenant().getId();
 
-    org.springframework.data.domain.Page<Invite> page;
+    Page<Invite> page;
+
+    Pageable sortedPageable =
+        PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(
+                        Direction.DESC,
+                        "createdAt"
+                )
+        );
 
     if (status != null) {
-        page = inviteRepository
-                .findByTenant_IdAndStatus(tenantId, status, pageable);
+        page = inviteRepository.findByTenantAndStatusWithFetch(tenantId, status, sortedPageable);
     } else {
-        page = inviteRepository
-                .findByTenant_Id(tenantId, pageable);
+        page = inviteRepository.findByTenantWithFetch(tenantId, sortedPageable);
     }
 
     return page.map(this::toView);
@@ -339,11 +375,51 @@ public InviteView getInviteById(Long inviteId) {
     return toView(invite);
 }
 
+@Transactional
+public void deleteInvite(Long inviteId) {
+
+    User currentAdmin = SecurityUtils.getCurrentUser();
+
+    if (!SecurityUtils.isAdmin()) {
+        throw new UnauthorizedException("Only ADMIN can delete invites");
+    }
+
+    Invite invite = inviteRepository.findById(inviteId)
+            .orElseThrow(() ->
+                    new BadRequestException("Invite not found"));
+
+    // Tenant boundary enforcement
+    if (!invite.getTenant().getId()
+            .equals(currentAdmin.getTenant().getId())) {
+        throw new UnauthorizedException("Cross-tenant access denied");
+    }
+
+    // Do NOT allow deletion of approved invites
+    if (invite.getStatus() == InviteStatus.APPROVED) {
+        throw new BadRequestException(
+                "Cannot delete an approved invite (audit integrity)"
+        );
+    }
+
+    inviteRepository.delete(invite);
+
+    auditService.log(
+            currentAdmin.getEmail(),
+            AuditAction.INVITE_DELETED,
+            "INVITE",
+            inviteId,
+            null,
+            invite.getEmail(),
+            currentAdmin.getTenant().getId()
+    );
+}
+
 private InviteView toView(Invite invite) {
 
     return new InviteView(
             invite.getId(),
             invite.getEmail(),
+            invite.getToken(),
             invite.getRole().getName(),
             invite.getClearanceLevel(),
             invite.getStatus(),

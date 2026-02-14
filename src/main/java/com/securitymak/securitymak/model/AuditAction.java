@@ -51,4 +51,6 @@ public enum AuditAction {
 
     BAD_PASSWORD,
 
+    INVITE_DELETED,
+
 }

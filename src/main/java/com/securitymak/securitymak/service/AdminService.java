@@ -77,42 +77,50 @@ public class AdminService {
         );
     }
 
+@Transactional
+public UserAdminView updateUserRole(Long userId, String roleName) {
 
-    public void updateUserRole(Long userId, String roleName) {
+    Long tenantId = SecurityUtils.getCurrentTenantId();
+    User currentAdmin = SecurityUtils.getCurrentUser();
 
-        Long tenantId = SecurityUtils.getCurrentTenantId();
-        String actorEmail = SecurityUtils.getCurrentUserEmail();
+    User user = userRepository
+            .findByIdAndTenant_Id(userId, tenantId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        User user = userRepository
-                .findByIdAndTenant_Id(userId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        // prevent self-demotion
-        if (user.getEmail().equals(actorEmail)) {
-            throw new BusinessRuleViolationException("Admins cannot change their own role");
-        }
-
-        Role newRole = roleRepository.findByName(roleName.toUpperCase())
-                .orElseThrow(() -> new BusinessRuleViolationException("Role not found"));
-
-        String oldRole = user.getRole().getName();
-        if (oldRole.equals(newRole.getName())) {
-            return;
-        }
-
-        user.setRole(newRole);
-        userRepository.save(user);
-
-        auditService.log(
-                actorEmail,
-                AuditAction.USER_ROLE_CHANGED,
-                "USER",
-                user.getId(),
-                oldRole,
-                newRole.getName(),
-                tenantId
-        );
+    if (user.getEmail().equals(currentAdmin.getEmail())) {
+        throw new BusinessRuleViolationException("Admins cannot change their own role");
     }
+
+    Role newRole = roleRepository.findByName(roleName.toUpperCase())
+            .orElseThrow(() -> new BusinessRuleViolationException("Role not found"));
+
+    String oldRole = user.getRole().getName();
+
+    if (oldRole.equals(newRole.getName())) {
+        return toAdminView(user);
+    }
+
+    user.setRole(newRole);
+
+    // 🔥 AUTO PROMOTE CLEARANCE
+    if ("ADMIN".equals(newRole.getName())) {
+        user.setClearanceLevel(SensitivityLevel.CRITICAL);
+    }
+
+    userRepository.save(user);
+
+    auditService.log(
+            currentAdmin.getEmail(),
+            AuditAction.USER_ROLE_CHANGED,
+            "USER",
+            user.getId(),
+            oldRole,
+            newRole.getName(),
+            tenantId
+    );
+
+    return toAdminView(user);
+}
 
     public List<Role> getAllRoles() {
         return roleRepository.findAll();
@@ -137,10 +145,15 @@ public class AdminService {
         SecurityUtils.requireAdmin();
 
         User currentAdmin = SecurityUtils.getCurrentUser();
+        
 
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("User not found"));
+
+        if ("ADMIN".equals(targetUser.getRole().getName())) {
+                throw new BadRequestException("Cannot change ADMIN clearance level");
+        }
 
         // 🔐 Tenant isolation
         if (!targetUser.getTenant().getId()

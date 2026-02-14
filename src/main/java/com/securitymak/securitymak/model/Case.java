@@ -58,4 +58,41 @@ public class Case {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SensitivityLevel sensitivityLevel;
+
+    // Indian legal metadata
+
+    @Enumerated(EnumType.STRING)
+    private CaseType caseType;
+
+    @Enumerated(EnumType.STRING)
+    private CourtLevel courtLevel;
+
+    @Enumerated(EnumType.STRING)
+    private CaseStage stage;
+
+    @Column(unique = false)
+    private String caseNumber;
+
+    private String courtName;
+
+    private String state;
+
+    private String district;
+
+    private LocalDateTime filingDate;
+
+    private LocalDateTime registrationDate;
+
+    @Enumerated(EnumType.STRING)
+    private MatterType matterType;
+
+    private String clientName;
+
+    private String opposingPartyName;
+
+    private String judgeName;
+
+    private String assignedAdvocate;
+
+    
 }

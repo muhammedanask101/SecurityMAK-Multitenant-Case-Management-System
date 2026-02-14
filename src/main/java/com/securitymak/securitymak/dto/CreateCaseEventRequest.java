@@ -1,0 +1,20 @@
+package com.securitymak.securitymak.dto;
+
+import com.securitymak.securitymak.model.CaseEventType;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+import java.time.LocalDateTime;
+
+public record CreateCaseEventRequest(
+
+        @NotNull
+        CaseEventType eventType,
+
+        @Size(max = 5000)
+        String description,
+
+        LocalDateTime eventDate,
+
+        LocalDateTime nextDate
+) {}

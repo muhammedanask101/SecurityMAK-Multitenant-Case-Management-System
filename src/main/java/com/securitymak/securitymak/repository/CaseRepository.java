@@ -30,11 +30,6 @@ public interface CaseRepository extends
     
     Page<Case> findByTenantIdAndOwnerId(Long tenantId, Long ownerId, Pageable pageable);
     
-    Page<Case> findByTenantIdAndSensitivityLevelLessThanEqual(
-        Long tenantId,
-        SensitivityLevel level,
-        Pageable pageable
-    );
 
     @Query("""
     SELECT c
@@ -67,4 +62,5 @@ Page<Case> findByTenantIdAndSensitivityLevel(
         SensitivityLevel sensitivityLevel,
         Pageable pageable
 );
+
 }

@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.securitymak.securitymak.model.SensitivityLevel;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import com.securitymak.securitymak.exception.CaseNotFoundException;
@@ -173,38 +174,45 @@ public class CaseService {
                 .toList();
     }
 
- public Page<CaseResponse> getMyCases(Pageable pageable) {
+public Page<CaseResponse> getMyCases(Pageable pageable) {
 
     User user = SecurityUtils.getCurrentUser();
     Long tenantId = SecurityUtils.getCurrentTenantId();
 
-    return caseRepository
-            .findByTenantIdAndOwnerId(tenantId, user.getId(), pageable)
-            .map(c -> {
-                if (!user.getClearanceLevel()
-                        .canAccess(c.getSensitivityLevel())) {
-                    throw new UnauthorizedCaseAccessException("Insufficient clearance");
-                }
-                return toResponse(c);
-            });
+    Specification<Case> spec =
+            CaseSpecification.belongsToTenant(tenantId);
+
+    Page<Case> casePage = caseRepository.findAll(spec, pageable);
+
+    List<CaseResponse> filtered = casePage.getContent()
+            .stream()
+            .filter(c ->
+                    user.getClearanceLevel()
+                            .canAccess(c.getSensitivityLevel())
+            )
+            .map(this::toResponse)
+            .toList();
+
+    return new PageImpl<>(
+            filtered,
+            pageable,
+            filtered.size() // Important: use filtered size
+    );
 }
 
 public Page<CaseResponse> getTenantCases(Pageable pageable) {
 
     SecurityUtils.requireAdmin();
 
-    User user = SecurityUtils.getCurrentUser();
     Long tenantId = SecurityUtils.getCurrentTenantId();
 
+    Specification<Case> spec =
+            CaseSpecification.belongsToTenant(tenantId);
+
     return caseRepository
-            .findByTenantIdAndSensitivityLevelLessThanEqual(
-                    tenantId,
-                    user.getClearanceLevel(),
-                    pageable
-            )
+            .findAll(spec, pageable)
             .map(this::toResponse);
-}
-                
+}              
 
     private CaseResponse toResponse(Case c) {
         return new CaseResponse(

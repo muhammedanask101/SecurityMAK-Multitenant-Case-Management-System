@@ -1,0 +1,7 @@
+ALTER TABLE cases
+ADD COLUMN case_type VARCHAR(50),
+ADD COLUMN court_level VARCHAR(50),
+ADD COLUMN state VARCHAR(255),
+ADD COLUMN district VARCHAR(255),
+ADD COLUMN filing_date TIMESTAMP,
+ADD COLUMN registration_date TIMESTAMP;

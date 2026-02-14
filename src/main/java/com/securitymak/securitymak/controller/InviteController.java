@@ -7,11 +7,14 @@ import com.securitymak.securitymak.model.SensitivityLevel;
 import com.securitymak.securitymak.service.InviteService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/invites")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class InviteController {
 
     private final InviteService inviteService;
@@ -37,14 +40,22 @@ public class InviteController {
         private SensitivityLevel clearanceLevel;
     }
 
+    @DeleteMapping("/{id}")
+    public void deleteInvite(@PathVariable Long id) {
+        inviteService.deleteInvite(id);
+    }
+
     @PostMapping("/accept")
-public void acceptInvite(@RequestBody AcceptInviteRequest request) {
-    inviteService.registerViaInvite(
-            request.getToken(),
-            request.getEmail(),
-            request.getPassword()
-    );
-}
+    @PreAuthorize("permitAll()")
+    public void acceptInvite(@RequestBody AcceptInviteRequest request) {
+        inviteService.registerViaInvite(
+                request.getToken(),
+                request.getEmail(),
+                request.getPassword()
+        );
+    }
+
+
 
 @Data
 public static class AcceptInviteRequest {

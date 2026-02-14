@@ -30,8 +30,13 @@ public class CaseSpecification {
                 cb.equal(root.get("sensitivityLevel"), level);
     }
 
-    public static Specification<Case> sensitivityLessThanEqual(SensitivityLevel level) {
-        return (root, query, cb) ->
-                cb.lessThanOrEqualTo(root.get("sensitivityLevel"), level);
-    }
+public static Specification<Case> sensitivityLessThanEqual(
+        SensitivityLevel level
+) {
+    return (root, query, cb) ->
+            cb.lessThanOrEqualTo(
+                    root.get("sensitivityLevel"),
+                    level
+            );
+}
 }

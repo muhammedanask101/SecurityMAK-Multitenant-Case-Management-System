@@ -3,6 +3,8 @@ package com.securitymak.securitymak.repository;
 import com.securitymak.securitymak.model.Invite;
 import com.securitymak.securitymak.model.InviteStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -23,6 +25,36 @@ Page<Invite> findByTenant_IdAndStatus(
         Long tenantId,
         InviteStatus status,
         Pageable pageable
+);
+
+@Query("""
+    select i from Invite i
+    join fetch i.role
+    join fetch i.createdBy
+    where i.tenant.id = :tenantId
+""")
+Page<Invite> findByTenantWithFetch(
+        @Param("tenantId") Long tenantId,
+        Pageable pageable
+);
+
+@Query("""
+    select i from Invite i
+    join fetch i.role
+    join fetch i.createdBy
+    where i.tenant.id = :tenantId
+      and i.status = :status
+""")
+Page<Invite> findByTenantAndStatusWithFetch(
+        @Param("tenantId") Long tenantId,
+        @Param("status") InviteStatus status,
+        Pageable pageable
+);
+
+boolean existsByEmailAndTenant_IdAndStatus(
+    String email,
+    Long tenantId,
+    InviteStatus status
 );
 
 }

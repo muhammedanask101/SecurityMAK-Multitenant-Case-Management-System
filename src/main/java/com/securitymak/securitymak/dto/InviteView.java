@@ -13,6 +13,7 @@ public class InviteView {
 
     private Long id;
     private String email;
+    private String token;
     private String role;
     private SensitivityLevel clearanceLevel;
     private InviteStatus status;
