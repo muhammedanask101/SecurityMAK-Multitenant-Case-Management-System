@@ -34,4 +34,13 @@ public class CaseAssignmentController {
     ) {
         return service.list(caseId);
     }
+
+    @DeleteMapping("/{assignmentId}")
+@PreAuthorize("hasRole('ADMIN')")
+public void delete(
+        @PathVariable Long caseId,
+        @PathVariable Long assignmentId
+) {
+    service.delete(caseId, assignmentId);
+}
 }

@@ -39,9 +39,10 @@ public class User implements UserDetails {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
-
-    @Column(nullable = false)
-    private boolean enabled = false;
+    
+@Builder.Default
+@Column(nullable = false)
+private boolean enabled = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "joined_via_invite_id")

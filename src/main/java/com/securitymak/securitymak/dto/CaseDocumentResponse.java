@@ -12,6 +12,12 @@ public record CaseDocumentResponse(
         Long fileSize,
         SensitivityLevel sensitivityLevel,
         String uploadedBy,
-        LocalDateTime uploadedAt
+        LocalDateTime uploadedAt,
+
+        // Enterprise metadata
+        String documentGroupId,
+        Integer version,
+        Boolean active,
+        String fileHash
 
 ) {}

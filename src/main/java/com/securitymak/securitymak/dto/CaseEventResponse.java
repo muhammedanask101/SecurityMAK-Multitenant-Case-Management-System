@@ -2,6 +2,8 @@ package com.securitymak.securitymak.dto;
 
 import com.securitymak.securitymak.model.CaseEventType;
 
+import java.time.LocalDate;
+
 import java.time.LocalDateTime;
 
 public record CaseEventResponse(
@@ -9,8 +11,8 @@ public record CaseEventResponse(
         Long id,
         CaseEventType eventType,
         String description,
-        LocalDateTime eventDate,
-        LocalDateTime nextDate,
+        LocalDate eventDate,
+        LocalDate nextDate,
         String createdBy,
         LocalDateTime createdAt
 ) {}

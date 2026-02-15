@@ -10,6 +10,10 @@ public interface EmailBanRepository extends JpaRepository<EmailBan, Long> {
 
     Optional<EmailBan> findByEmailAndTenant(String email, Tenant tenant);
 
+    void deleteByEmailAndTenant(String email, Tenant tenant);
+
+    boolean existsByEmailAndTenantIsNull(String email);
+
 
     boolean existsByEmailAndTenant(String email, Tenant tenant);
 

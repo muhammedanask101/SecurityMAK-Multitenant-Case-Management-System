@@ -15,6 +15,8 @@ import org.springframework.security.access.AccessDeniedException;
 
 import com.securitymak.securitymak.model.User;
 
+import io.jsonwebtoken.ExpiredJwtException;
+
 import java.io.IOException;
 
 @Component
@@ -42,6 +44,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        try {
+
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -64,6 +68,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 throw new AccessDeniedException("Tenant mismatch in JWT");
             }
 
+            if (!user.isEnabled()) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
+
             if (jwtService.isTokenValid(token, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
@@ -79,6 +88,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
+    } catch (ExpiredJwtException e) {
+    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    return;
+}
 
         filterChain.doFilter(request, response);
     }

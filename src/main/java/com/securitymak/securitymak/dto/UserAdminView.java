@@ -7,5 +7,6 @@ public record UserAdminView(
         String email,
         String role,
         SensitivityLevel clearanceLevel,
-        String organizationName
+        String organizationName,
+        boolean enabled
 ) {}

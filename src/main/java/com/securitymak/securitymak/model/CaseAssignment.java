@@ -32,13 +32,15 @@ public class CaseAssignment {
     @Column(nullable = false)
     private AssignmentRole role;
 
+    @Builder.Default
     @Column(nullable = false)
-    private LocalDateTime assignedAt;
+    private LocalDateTime assignedAt = LocalDateTime.now();
 
-    @Column(nullable = false)
+   @Builder.Default
+@Column(nullable = false)
 private boolean active = true;
 
-public void deactivate() {
-    this.active = false;
-}
+    public void deactivate() {
+        this.active = false;
+    }
 }

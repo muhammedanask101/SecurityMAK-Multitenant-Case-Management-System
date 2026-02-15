@@ -4,8 +4,6 @@ import com.securitymak.securitymak.model.AssignmentRole;
 import jakarta.validation.constraints.NotNull;
 
 public record CreateCaseAssignmentRequest(
-
-        @NotNull Long userId,
+        @NotNull String userEmail,
         @NotNull AssignmentRole role
-
 ) {}

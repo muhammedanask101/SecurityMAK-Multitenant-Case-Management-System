@@ -4,7 +4,7 @@ import com.securitymak.securitymak.model.CaseEventType;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 public record CreateCaseEventRequest(
 
@@ -14,7 +14,7 @@ public record CreateCaseEventRequest(
         @Size(max = 5000)
         String description,
 
-        LocalDateTime eventDate,
+        LocalDate eventDate,
 
-        LocalDateTime nextDate
+        LocalDate nextDate
 ) {}

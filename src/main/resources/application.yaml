@@ -1,5 +1,8 @@
 server:
   port: 8080
+  error:
+    include-message: always
+    include-stacktrace: always
 
 spring:
   application:
@@ -35,6 +38,8 @@ logging:
   level:
     "org.springframework.security": DEBUG
     "org.hibernate.SQL": DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate: ERROR
 
 jwt:
   secret: securecase-super-secret-key-256-bits-long!!!
@@ -43,6 +48,7 @@ jwt:
 securecase:
   storage:
     path: uploads
+    
 
 
 

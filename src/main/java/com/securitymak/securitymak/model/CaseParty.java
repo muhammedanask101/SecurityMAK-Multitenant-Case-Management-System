@@ -35,8 +35,12 @@ public class CaseParty {
 
     private String address;
 
-    @Column(nullable = false)
+@Builder.Default
+@Column(nullable = false)
 private boolean active = true;
+
+@Column(columnDefinition = "TEXT")
+private String notes;
 
 public void deactivate() {
     this.active = false;

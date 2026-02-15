@@ -53,4 +53,6 @@ public enum AuditAction {
 
     INVITE_DELETED,
 
+    ASSIGNMENT_REMOVED,
+
 }

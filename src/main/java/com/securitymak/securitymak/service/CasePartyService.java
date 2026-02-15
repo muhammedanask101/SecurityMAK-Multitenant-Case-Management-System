@@ -47,6 +47,7 @@ public class CasePartyService {
                 .advocateName(request.advocateName())
                 .contactInfo(request.contactInfo())
                 .address(request.address())
+                .notes(request.notes())
                 .build();
 
         CaseParty saved = casePartyRepository.save(party);
@@ -99,7 +100,8 @@ public class CasePartyService {
                 p.getRole(),
                 p.getAdvocateName(),
                 p.getContactInfo(),
-                p.getAddress()
+                p.getAddress(),
+                p.getNotes()
         );
     }
 }

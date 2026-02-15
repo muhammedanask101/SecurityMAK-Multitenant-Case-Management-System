@@ -2,14 +2,15 @@ package com.securitymak.securitymak.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+@Builder
 @Entity
 @Table(name = "case_events")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class CaseEvent {
 
     @Id
@@ -30,21 +31,24 @@ public class CaseEvent {
     @Column(length = 5000)
     private String description;
 
-    private LocalDateTime eventDate;
+    private LocalDate eventDate;
 
-    private LocalDateTime nextDate;
+    private LocalDate nextDate;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "created_by")
     private User createdBy;
 
+    @Builder.Default
     @Column(nullable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Builder.Default
     @Column(nullable = false)
-private boolean active = true;
+    private boolean active = true;
 
-public void deactivate() {
-    this.active = false;
+    public void deactivate() {
+        this.active = false;
+    }
 }
-}
+

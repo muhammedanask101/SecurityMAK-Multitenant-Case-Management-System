@@ -8,6 +8,8 @@ import com.securitymak.securitymak.repository.CaseAssignmentRepository;
 import com.securitymak.securitymak.repository.CaseRepository;
 import com.securitymak.securitymak.repository.UserRepository;
 import com.securitymak.securitymak.security.SecurityUtils;
+import org.springframework.transaction.annotation.Transactional;
+
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -37,8 +39,9 @@ public class CaseAssignmentService {
 
         accessService.validateTenantAccess(caseEntity);
 
-        User assignedUser = userRepository.findById(request.userId())
-                .orElseThrow();
+        User assignedUser = userRepository
+        .findByEmail(request.userEmail())
+        .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (!assignedUser.getTenant().getId().equals(tenantId)) {
             throw new UnauthorizedCaseAccessException("Cannot assign user from another tenant");
@@ -82,6 +85,7 @@ public class CaseAssignmentService {
         return toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     public List<CaseAssignmentResponse> list(Long caseId) {
 
         Long tenantId = SecurityUtils.getCurrentTenantId();
@@ -101,5 +105,34 @@ public class CaseAssignmentService {
                 a.getAssignedAt()
         );
     }
+
+ @Transactional
+public void delete(Long caseId, Long assignmentId) {
+
+    SecurityUtils.requireAdmin();
+
+    User admin = SecurityUtils.getCurrentUser();
+    Long tenantId = SecurityUtils.getCurrentTenantId();
+
+    CaseAssignment assignment = repository
+            .findByIdAndCaseEntityIdAndTenantId(
+                    assignmentId,
+                    caseId,
+                    tenantId
+            )
+            .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
+    repository.delete(assignment);
+
+    auditService.log(
+            admin.getEmail(),
+            AuditAction.ASSIGNMENT_REMOVED,
+            "CASE_ASSIGNMENT",
+            assignmentId,
+            assignment.getRole().name(), // old value
+            null,
+            tenantId
+    );
+}
 }
 

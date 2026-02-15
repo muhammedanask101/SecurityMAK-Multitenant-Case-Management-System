@@ -6,9 +6,11 @@ import com.securitymak.securitymak.exception.ResourceNotFoundException;
 import com.securitymak.securitymak.exception.UnauthorizedCaseAccessException;
 import com.securitymak.securitymak.exception.UnauthorizedException;
 import com.securitymak.securitymak.model.AuditAction;
+import com.securitymak.securitymak.model.EmailBan;
 import com.securitymak.securitymak.model.Role;
 import com.securitymak.securitymak.model.SensitivityLevel;
 import com.securitymak.securitymak.model.User;
+import com.securitymak.securitymak.repository.EmailBanRepository;
 import com.securitymak.securitymak.repository.RoleRepository;
 import com.securitymak.securitymak.repository.UserRepository;
 import com.securitymak.securitymak.security.SecurityUtils;
@@ -32,6 +34,7 @@ public class AdminService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final AuditService auditService;
+    private final EmailBanRepository emailBanRepository;
 
     public List<UserAdminView> getAllUsers() {
 
@@ -54,7 +57,8 @@ public class AdminService {
                         user.getEmail(),
                         user.getRole().getName(),
                         user.getClearanceLevel(),
-                        user.getTenant().getName()
+                        user.getTenant().getName(),
+                        user.isEnabled() 
                 ))
                 .toList();
     }
@@ -132,7 +136,8 @@ public UserAdminView updateUserRole(Long userId, String roleName) {
             user.getEmail(),
             user.getRole().getName(),
             user.getClearanceLevel(),
-            user.getTenant().getName()
+            user.getTenant().getName(),
+            user.isEnabled() 
     );
 }
 
@@ -259,6 +264,83 @@ public void enableUser(Long userId) {
             "ENABLED=false",
             "ENABLED=true",
             currentAdmin.getTenant().getId()
+    );
+}
+
+@Transactional
+public void banUser(Long userId, String reason) {
+
+    User admin = SecurityUtils.getCurrentUser();
+
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+    if (!user.getTenant().getId().equals(admin.getTenant().getId())) {
+        throw new UnauthorizedException("Cross-tenant access denied");
+    }
+
+    if (user.getId().equals(admin.getId())) {
+        throw new BadRequestException("Cannot ban yourself");
+    }
+
+    if ("ADMIN".equals(user.getRole().getName())) {
+        throw new BadRequestException("Admins cannot be banned");
+    }
+
+
+    if (emailBanRepository.existsByEmailAndTenant(user.getEmail(), user.getTenant())) {
+        return; // already banned
+    }
+
+    EmailBan ban = EmailBan.builder()
+            .email(user.getEmail())
+            .tenant(user.getTenant())
+            .bannedBy(admin)
+            .reason(reason)
+            .build();
+
+    emailBanRepository.save(ban);
+
+    user.setEnabled(false);
+
+    auditService.log(
+            admin.getEmail(),
+            AuditAction.EMAIL_BANNED,
+            "USER",
+            user.getId(),
+            null,
+            reason,
+            admin.getTenant().getId()
+    );
+}
+
+@Transactional
+public void unbanUser(Long userId) {
+
+    User admin = SecurityUtils.getCurrentUser();
+
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+if ("ADMIN".equals(user.getRole().getName())) {
+        throw new BadRequestException("Admins cannot be unbanned");
+    }
+
+    emailBanRepository.deleteByEmailAndTenant(
+            user.getEmail(),
+            user.getTenant()
+    );
+
+    user.setEnabled(true);
+
+    auditService.log(
+            admin.getEmail(),
+            AuditAction.EMAIL_UNBANNED,
+            "USER",
+            user.getId(),
+            null,
+            null,
+            admin.getTenant().getId()
     );
 }
 }

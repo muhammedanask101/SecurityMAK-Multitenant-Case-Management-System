@@ -9,5 +9,6 @@ public record CasePartyResponse(
         CasePartyRole role,
         String advocateName,
         String contactInfo,
-        String address
+        String address,
+        String notes
 ) {}

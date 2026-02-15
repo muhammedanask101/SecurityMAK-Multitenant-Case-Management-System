@@ -16,5 +16,7 @@ public record CreateCasePartyRequest(
 
         String contactInfo,
 
-        String address
+        String address,
+
+        String notes
 ) {}

@@ -93,4 +93,19 @@ public void disableUser(@PathVariable Long id) {
 public void enableUser(@PathVariable Long id) {
     adminService.enableUser(id);
 }
+
+@PatchMapping("/users/{id}/ban")
+@PreAuthorize("hasRole('ADMIN')")
+public void banUser(
+        @PathVariable Long id,
+        @RequestParam(required = false) String reason
+) {
+    adminService.banUser(id, reason);
+}
+
+@PatchMapping("/users/{id}/unban")
+@PreAuthorize("hasRole('ADMIN')")
+public void unbanUser(@PathVariable Long id) {
+    adminService.unbanUser(id);
+}
 }

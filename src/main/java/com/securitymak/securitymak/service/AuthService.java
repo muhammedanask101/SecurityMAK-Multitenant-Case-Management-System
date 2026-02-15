@@ -104,7 +104,8 @@ public class AuthService {
             savedUser.getRole().getName(),
             savedUser.getTenant().getId(),
             user.getTenant().getName(),
-            savedUser.getClearanceLevel()  
+            savedUser.getClearanceLevel(),
+            savedUser.isEnabled()
         )
     );
 
@@ -189,7 +190,8 @@ public class AuthService {
                 user.getRole().getName(),
                 user.getTenant().getId(),
                 user.getTenant().getName(),
-                user.getClearanceLevel()  
+                user.getClearanceLevel(),
+                user.isEnabled()
                 )
         );
         }
@@ -238,7 +240,13 @@ private void checkIfEmailBanned(
         AuditAction action
 ) {
 
-    if (emailBanRepository.existsByEmailAndTenant_Id(email, tenantId)) {
+    boolean tenantBan =
+            emailBanRepository.existsByEmailAndTenant_Id(email, tenantId);
+
+    boolean globalBan =
+            emailBanRepository.existsByEmailAndTenantIsNull(email);
+
+    if (tenantBan || globalBan) {
 
         auditService.log(
                 email,
@@ -246,12 +254,12 @@ private void checkIfEmailBanned(
                 "USER",
                 null,
                 null,
-                "TENANT_BAN",
+                tenantBan ? "TENANT_BAN" : "GLOBAL_BAN",
                 tenantId
         );
 
         throw new UnauthorizedException(
-                "This email is banned for this organization"
+                "This email is banned"
         );
     }
 }

@@ -20,5 +20,6 @@ public class LoginResponse {
         private Long tenantId;
         private String organizationName;
         private SensitivityLevel clearanceLevel;
+        private boolean enabled;
     }
 }

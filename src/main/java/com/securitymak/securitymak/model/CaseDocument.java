@@ -44,17 +44,22 @@ public class CaseDocument {
     @Column(nullable = false)
     private LocalDateTime uploadedAt;
 
+    @Builder.Default
     @Column(nullable = false)
-private boolean active = true;
+    private boolean active = true;
 
 @Column(nullable = false)
 private Long fileSize;
 
+@Column(length = 64, nullable = false)
 private String fileHash;
 
+@Column(nullable = false)
 private String documentGroupId;
 
-private int version;
+@Builder.Default
+@Column(nullable = false)
+private int version = 1;
 
 public void deactivate() {
     this.active = false;

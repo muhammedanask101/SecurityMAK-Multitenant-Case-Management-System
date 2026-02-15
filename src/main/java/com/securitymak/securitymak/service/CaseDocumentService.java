@@ -263,7 +263,12 @@ public CaseDocumentResponse upload(
                 d.getFileSize(),
                 d.getSensitivityLevel(),
                 d.getUploadedBy().getEmail(),
-                d.getUploadedAt()
+                d.getUploadedAt(),
+                
+                d.getDocumentGroupId(),
+                d.getVersion(),
+                d.isActive(),
+                d.getFileHash()
         );
     }
 }
