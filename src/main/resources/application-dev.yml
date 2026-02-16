@@ -1,0 +1,31 @@
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-stacktrace: always
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/securitymak
+    username: securitymak_user
+    password: securitymak123
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate: ERROR
+
+jwt:
+  secret: securecase-dev-secret
+  expiration: 86400000
