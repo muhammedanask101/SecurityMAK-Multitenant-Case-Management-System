@@ -40,5 +40,15 @@ public class CaseEventController {
     ) {
         caseEventService.deleteEvent(eventId);
     }
+
+    @PutMapping("/{eventId}")
+@PreAuthorize("isAuthenticated()")
+public CaseEventResponse updateEvent(
+        @PathVariable Long caseId,
+        @PathVariable Long eventId,
+        @Valid @RequestBody UpdateCaseEventRequest request
+) {
+    return caseEventService.updateEvent(caseId, eventId, request);
+}
 }
 

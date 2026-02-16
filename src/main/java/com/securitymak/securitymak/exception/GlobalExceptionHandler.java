@@ -4,6 +4,7 @@ import com.securitymak.securitymak.exception.CaseNotFoundException;
 import com.securitymak.securitymak.exception.InvalidCaseTransitionException;
 import com.securitymak.securitymak.exception.UnauthorizedCaseAccessException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -98,5 +99,20 @@ public class GlobalExceptionHandler {
     public ApiError handleBusinessRule(BusinessRuleViolationException ex) {
         return ApiError.of(400, "BUSINESS_RULE_VIOLATION", ex.getMessage());
     }
+
+    @ExceptionHandler(ForbiddenOperationException.class)
+public ResponseEntity<ApiError> handleForbidden(ForbiddenOperationException ex) {
+
+    ApiError error = new ApiError(
+            HttpStatus.FORBIDDEN.value(),
+            "FORBIDDEN",
+            ex.getMessage(),
+            LocalDateTime.now()
+    );
+
+    return ResponseEntity
+            .status(HttpStatus.FORBIDDEN)
+            .body(error);
+}
     
 }

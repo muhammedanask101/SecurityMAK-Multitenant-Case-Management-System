@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.securitymak.securitymak.dto.UpdateCasePartyRequest;
 
 import java.util.List;
 
@@ -40,4 +41,15 @@ public class CasePartyController {
     ) {
         casePartyService.deleteParty(partyId);
     }
+
+ @PutMapping("/{partyId}")
+@PreAuthorize("isAuthenticated()")
+public CasePartyResponse updateParty(
+        @PathVariable Long caseId,
+        @PathVariable Long partyId,
+        @Valid @RequestBody UpdateCasePartyRequest request
+) {
+    return casePartyService.updateParty(caseId, partyId, request);
+}
+
 }

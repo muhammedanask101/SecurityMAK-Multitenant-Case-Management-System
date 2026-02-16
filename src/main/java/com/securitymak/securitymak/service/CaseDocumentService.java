@@ -1,6 +1,8 @@
 package com.securitymak.securitymak.service;
 
+import com.securitymak.securitymak.dto.CaseDocumentGroupResponse;
 import com.securitymak.securitymak.dto.CaseDocumentResponse;
+import com.securitymak.securitymak.exception.ForbiddenOperationException;
 import com.securitymak.securitymak.exception.UnauthorizedCaseAccessException;
 import com.securitymak.securitymak.model.*;
 import com.securitymak.securitymak.repository.CaseDocumentRepository;
@@ -16,22 +18,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Collectors;
 import java.util.Set;
 import java.util.UUID;
-import java.security.MessageDigest;
-import java.util.HexFormat;
 
 @Service
 @RequiredArgsConstructor
 public class CaseDocumentService {
 
-    private static final long MAX_FILE_SIZE = 20 * 1024 * 1024; // 10MB
+    private static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
 
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
             "application/pdf",
@@ -65,6 +65,29 @@ public CaseDocumentResponse upload(
 
     accessService.validateTenantAccess(caseEntity);
     accessService.validateCaseAccess(caseEntity, user);
+
+    boolean isAdmin = user.getRole().getName().equals("ADMIN");
+boolean isOwner = caseEntity.getOwner().getId().equals(user.getId());
+
+if (!isAdmin && !isOwner) {
+
+    auditService.log(
+            user.getEmail(),
+            AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
+            "CASE_DOCUMENT_UPLOAD_DENIED",
+            caseId,
+            null,
+            "Non-owner attempted document upload",
+            tenantId
+    );
+
+    throw new ForbiddenOperationException(
+            "Only case owner or admin can create documents"
+    );
+}
+    
+
+   accessService.validateEditAccess(caseEntity, user, isAdmin);
 
     if (!user.getClearanceLevel().canAccess(sensitivityLevel)) {
         throw new UnauthorizedCaseAccessException("Insufficient clearance");
@@ -103,7 +126,12 @@ public CaseDocumentResponse upload(
     // Hash calculation
     String hash = calculateHash(file);
 
-    repository.findByCaseEntityIdAndFileHashAndActiveTrue(caseId, hash)
+    repository
+    .findByTenantIdAndCaseEntityIdAndFileHashAndActiveTrue(
+        tenantId,
+        caseId,
+        hash
+    )
         .ifPresent(existing -> {
             auditService.log(
                     user.getEmail(),
@@ -155,10 +183,8 @@ public CaseDocumentResponse upload(
 
     
 
-    /* =====================================================
-       LIST DOCUMENTS
-    ====================================================== */
-    public List<CaseDocumentResponse> list(Long caseId) {
+ @Transactional(readOnly = true)
+public List<CaseDocumentGroupResponse> list(Long caseId) {
 
     User user = SecurityUtils.getCurrentUser();
     Long tenantId = SecurityUtils.getCurrentTenantId();
@@ -169,78 +195,95 @@ public CaseDocumentResponse upload(
     accessService.validateTenantAccess(caseEntity);
     accessService.validateCaseAccess(caseEntity, user);
 
-    return repository
-            .findByTenantIdAndCaseEntityIdAndActiveTrue(tenantId, caseId)
+    List<CaseDocument> documents =
+            repository.findByTenantIdAndCaseEntityIdAndActiveTrue(tenantId, caseId);
+
+    // ABAC filtering
+    if (!user.getRole().getName().equals("ADMIN")) {
+        documents = documents.stream()
+                .filter(doc ->
+                        user.getClearanceLevel()
+                                .canAccess(doc.getSensitivityLevel()))
+                .toList();
+    }
+
+    // Group by documentGroupId
+    return documents.stream()
+            .collect(Collectors.groupingBy(CaseDocument::getDocumentGroupId))
+            .entrySet()
             .stream()
-            .collect(Collectors.toMap(
-                    CaseDocument::getDocumentGroupId,
-                    doc -> doc,
-                    (existing, replacement) ->
-                            existing.getVersion() > replacement.getVersion()
-                                    ? existing
-                                    : replacement
+            .map(entry -> new CaseDocumentGroupResponse(
+                    entry.getKey(),
+                    entry.getValue().stream()
+                            .sorted((a, b) -> b.getVersion() - a.getVersion())
+                            .map(this::toResponse)
+                            .toList()
             ))
-            .values()
-            .stream()
-            .filter(doc -> user.getClearanceLevel()
-                    .canAccess(doc.getSensitivityLevel()))
-            .map(this::toResponse)
             .toList();
 }
     /* =====================================================
        DOWNLOAD DOCUMENT
     ====================================================== */
-    public ResponseEntity<Resource> download(Long documentId) {
+@Transactional(readOnly = true)
+public ResponseEntity<Resource> download(Long documentId) {
 
-        User user = SecurityUtils.getCurrentUser();
-        Long tenantId = SecurityUtils.getCurrentTenantId();
+    User user = SecurityUtils.getCurrentUser();
+    Long tenantId = SecurityUtils.getCurrentTenantId();
 
-        CaseDocument doc = repository.findById(documentId)
-                .orElseThrow();
+    // Fetch tenant-safe & active document
+    CaseDocument doc = repository
+            .findByIdAndTenantIdAndActiveTrue(documentId, tenantId)
+            .orElseThrow(UnauthorizedCaseAccessException::new);
 
-        if (!doc.getTenantId().equals(tenantId) || !doc.isActive()) {
-            throw new UnauthorizedCaseAccessException();
-        }
-
-        accessService.validateCaseAccess(doc.getCaseEntity(), user);
-
-        if (!user.getClearanceLevel()
-                .canAccess(doc.getSensitivityLevel())) {
-            throw new UnauthorizedCaseAccessException();
-        }
-
-        Resource resource = storageService.loadAsResource(doc.getStoragePath());
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + doc.getFileName() + "\"")
-                .header(HttpHeaders.CONTENT_TYPE, doc.getFileType())
-                .body(resource);
+    // 🔒 ABAC Clearance Check
+    if (!user.getClearanceLevel()
+            .canAccess(doc.getSensitivityLevel())) {
+        throw new UnauthorizedCaseAccessException();
     }
+
+    // 🔐 Validate case access WITHOUT touching lazy relationship
+    accessService.validateCaseAccess(doc.getCaseEntity(), user);
+
+    Resource resource =
+            storageService.loadAsResource(doc.getStoragePath());
+
+    return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"" + doc.getFileName() + "\"")
+            .header(HttpHeaders.CONTENT_TYPE, doc.getFileType())
+            .body(resource);
+}
 
     /* =====================================================
        SOFT DELETE (ADMIN ONLY)
     ====================================================== */
-    public void delete(Long documentId) {
+   public void delete(Long documentId) {
 
-        SecurityUtils.requireAdmin();
+    SecurityUtils.requireAdmin();
 
-        CaseDocument doc = repository.findById(documentId)
-                .orElseThrow();
+    User currentUser = SecurityUtils.getCurrentUser();
 
-        doc.deactivate();
-        repository.save(doc);
+    CaseDocument doc = repository.findById(documentId)
+            .orElseThrow();
 
-        auditService.log(
-                SecurityUtils.getCurrentUserEmail(),
-                AuditAction.CASE_UPDATED,
-                "CASE_DOCUMENT_DELETED",
-                doc.getId(),
-                doc.getFileName(),
-                null,
-                doc.getTenantId()
-        );
-    }
+    Case caseEntity = doc.getCaseEntity();
+
+    accessService.validateTenantAccess(caseEntity);
+    accessService.validateEditAccess(caseEntity, currentUser, true);
+
+    doc.deactivate();
+    repository.save(doc);
+
+    auditService.log(
+            currentUser.getEmail(),
+            AuditAction.CASE_UPDATED,
+            "CASE_DOCUMENT_DELETED",
+            doc.getId(),
+            doc.getFileName(),
+            null,
+            doc.getTenantId()
+    );
+}
 
     private String calculateHash(MultipartFile file) {
     try {
@@ -271,4 +314,45 @@ public CaseDocumentResponse upload(
                 d.getFileHash()
         );
     }
+
+    @Transactional
+public void updateGroupSensitivity(
+        Long caseId,
+        String documentGroupId,
+        SensitivityLevel newLevel
+) {
+    SecurityUtils.requireAdmin();
+
+    Long tenantId = SecurityUtils.getCurrentTenantId();
+    User user = SecurityUtils.getCurrentUser();
+
+    List<CaseDocument> documents =
+            repository.findByTenantIdAndCaseEntityIdAndDocumentGroupIdAndActiveTrue(
+                    tenantId,
+                    caseId,
+                    documentGroupId
+            );
+
+
+    if (documents.isEmpty()) {
+        throw new RuntimeException("Document group not found");
+    }
+
+    for (CaseDocument doc : documents) {
+        SensitivityLevel oldLevel = doc.getSensitivityLevel();
+        doc.updateSensitivity(newLevel);
+
+        auditService.log(
+                user.getEmail(),
+                AuditAction.CASE_UPDATED,
+                "CASE_DOCUMENT_SENSITIVITY_UPDATED",
+                doc.getId(),
+                oldLevel.name(),
+                newLevel.name(),
+                tenantId
+        );
+    }
+
+    repository.saveAll(documents);
+}
 }

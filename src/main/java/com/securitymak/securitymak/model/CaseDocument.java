@@ -61,6 +61,10 @@ private String documentGroupId;
 @Column(nullable = false)
 private int version = 1;
 
+public void updateSensitivity(SensitivityLevel newLevel) {
+    this.sensitivityLevel = newLevel;
+}
+
 public void deactivate() {
     this.active = false;
 }

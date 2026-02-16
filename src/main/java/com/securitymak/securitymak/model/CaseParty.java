@@ -45,4 +45,20 @@ private String notes;
 public void deactivate() {
     this.active = false;
 }
+
+public void update(
+        String name,
+        CasePartyRole role,
+        String advocateName,
+        String contactInfo,
+        String address,
+        String notes
+) {
+    this.name = name;
+    this.role = role;
+    this.advocateName = advocateName;
+    this.contactInfo = contactInfo;
+    this.address = address;
+    this.notes = notes;
+}
 }

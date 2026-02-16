@@ -6,6 +6,7 @@ import com.securitymak.securitymak.model.AuditAction;
 import com.securitymak.securitymak.model.Case;
 import com.securitymak.securitymak.model.CaseStatus;
 import com.securitymak.securitymak.model.User;
+import com.securitymak.securitymak.repository.CaseRepository;
 import com.securitymak.securitymak.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 public class CaseAccessService {
 
     private final AuditService auditService;
+    private final CaseRepository caseRepository;
 
     public void validateTenantAccess(Case c) {
         Long tenantId = SecurityUtils.getCurrentTenantId();
@@ -53,30 +55,84 @@ public class CaseAccessService {
         }
     }
 
-    public void validateEditAccess(Case c, User user, boolean isAdmin) {
+ public void validateEditAccess(Case c, User user, boolean isAdmin) {
 
-        boolean isOwner = c.getOwner().getId().equals(user.getId());
+    boolean isOwner = c.getOwner().getId().equals(user.getId());
+    CaseStatus status = c.getStatus();
+    Long tenantId = SecurityUtils.getCurrentTenantId();
 
-        if (!isAdmin && !isOwner) {
+    // 🔒 ARCHIVED = fully immutable
+    if (status == CaseStatus.ARCHIVED) {
 
-            auditService.log(
-            user.getEmail(),
-            AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
-            "CASE",
-            c.getId(),
-            "EDIT_ATTEMPT",
-            null,
-            SecurityUtils.getCurrentTenantId()
-    );
+        auditService.log(
+                user.getEmail(),
+                AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
+                "CASE",
+                c.getId(),
+                "ARCHIVED_EDIT_ATTEMPT",
+                null,
+                tenantId
+        );
 
-            throw new UnauthorizedCaseAccessException("Only owner or admin can edit");
-        }
-
-        if (!isAdmin &&
-                (c.getStatus() == CaseStatus.REVIEW
-                        || c.getStatus() == CaseStatus.CLOSED
-                        || c.getStatus() == CaseStatus.ARCHIVED)) {
-            throw new InvalidCaseTransitionException("Case cannot be edited in current state");
-        }
+        throw new InvalidCaseTransitionException(
+                "Archived cases are immutable"
+        );
     }
+
+    // 🔒 CLOSED = admin only
+    if (status == CaseStatus.CLOSED && !isAdmin) {
+
+        auditService.log(
+                user.getEmail(),
+                AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
+                "CASE",
+                c.getId(),
+                "CLOSED_EDIT_ATTEMPT",
+                null,
+                tenantId
+        );
+
+        throw new UnauthorizedCaseAccessException(
+                "Closed cases are editable by admin only"
+        );
+    }
+
+    // 🔒 REVIEW = admin only
+    if (status == CaseStatus.REVIEW && !isAdmin) {
+
+        auditService.log(
+                user.getEmail(),
+                AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
+                "CASE",
+                c.getId(),
+                "REVIEW_EDIT_ATTEMPT",
+                null,
+                tenantId
+        );
+
+        throw new UnauthorizedCaseAccessException(
+                "Cases in review are editable by admin only"
+        );
+    }
+
+    // 🔒 Ownership check for lower stages
+    if (!isAdmin && !isOwner) {
+
+        auditService.log(
+                user.getEmail(),
+                AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
+                "CASE",
+                c.getId(),
+                "EDIT_ATTEMPT_NON_OWNER",
+                null,
+                tenantId
+        );
+
+        throw new UnauthorizedCaseAccessException(
+                "Only owner or admin can edit"
+        );
+    }
+}
+
+
 }

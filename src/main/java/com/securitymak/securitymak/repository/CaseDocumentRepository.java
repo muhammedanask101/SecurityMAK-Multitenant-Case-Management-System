@@ -1,6 +1,8 @@
 package com.securitymak.securitymak.repository;
 
 import com.securitymak.securitymak.model.CaseDocument;
+import com.securitymak.securitymak.model.SensitivityLevel;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
@@ -19,6 +21,30 @@ Optional<CaseDocument> findTopByDocumentGroupIdOrderByVersionDesc(String documen
 Optional<CaseDocument> findByCaseEntityIdAndFileHashAndActiveTrue(
         Long caseId,
         String fileHash
+);
+
+List<CaseDocument> findByTenantIdAndCaseEntityIdAndActiveTrueAndSensitivityLevelLessThanEqual(
+    Long tenantId,
+    Long caseId,
+    SensitivityLevel sensitivityLevel
+);
+
+Optional<CaseDocument> findByIdAndTenantIdAndActiveTrue(
+        Long id,
+        Long tenantId
+);
+
+Optional<CaseDocument> 
+findByTenantIdAndCaseEntityIdAndFileHashAndActiveTrue(
+        Long tenantId,
+        Long caseId,
+        String fileHash
+);
+
+List<CaseDocument> findByTenantIdAndCaseEntityIdAndDocumentGroupIdAndActiveTrue(
+        Long tenantId,
+        Long caseId,
+        String documentGroupId
 );
 
 }

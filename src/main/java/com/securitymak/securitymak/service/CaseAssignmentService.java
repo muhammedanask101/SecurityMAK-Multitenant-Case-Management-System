@@ -38,6 +38,7 @@ public class CaseAssignmentService {
                 .orElseThrow();
 
         accessService.validateTenantAccess(caseEntity);
+      accessService.validateEditAccess(caseEntity, admin, true);
 
         User assignedUser = userRepository
         .findByEmail(request.userEmail())
@@ -122,6 +123,8 @@ public void delete(Long caseId, Long assignmentId) {
             )
             .orElseThrow(() -> new RuntimeException("Assignment not found"));
 
+        Case caseEntity = assignment.getCaseEntity();
+accessService.validateEditAccess(caseEntity, admin, true);
     repository.delete(assignment);
 
     auditService.log(

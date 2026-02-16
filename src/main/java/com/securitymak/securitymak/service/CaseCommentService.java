@@ -43,6 +43,9 @@ public class CaseCommentService {
         caseAccessService.validateTenantAccess(c);
         caseAccessService.validateCaseAccess(c, currentUser);
 
+          caseAccessService.validateEditAccess(c, currentUser, isAdmin);
+
+
         // Comment sensitivity must not exceed user clearance
         if (!currentUser.getClearanceLevel()
                 .canAccess(request.sensitivityLevel())) {
@@ -122,9 +125,19 @@ public void deleteComment(Long commentId) {
 
     SecurityUtils.requireAdmin();
 
+    User currentUser = SecurityUtils.getCurrentUser();
+boolean isAdmin = true;
+
     CaseComment comment = caseCommentRepository.findById(commentId)
             .orElseThrow(() -> new ResourceNotFoundException("Case not found"));
 
+            Case caseEntity = comment.getCaseEntity();
+           
+        caseAccessService.validateTenantAccess(caseEntity);
+
+    // ✅ Block if archived
+   caseAccessService.validateEditAccess(caseEntity, currentUser, isAdmin);
+   
     caseCommentRepository.delete(comment);
 
     auditService.log(

@@ -87,6 +87,9 @@ public class CaseService {
         Case c = caseRepository.findById(caseId)
         .orElseThrow(CaseNotFoundException::new);
 
+        caseAccessService.validateTenantAccess(c);
+caseAccessService.validateEditAccess(c, admin, true);
+
         if (!c.getTenantId().equals(tenantId)) {
 
             auditService.log(
@@ -100,6 +103,10 @@ public class CaseService {
             );
 
             throw new UnauthorizedCaseAccessException();
+        }
+
+        if (c.getStatus() == CaseStatus.ARCHIVED) {
+                throw new InvalidCaseTransitionException("Archived case cannot be modified");
         }
 
         CaseStatus oldStatus = c.getStatus();
@@ -237,11 +244,13 @@ public CaseResponse updateCase(Long caseId, UpdateCaseRequest request) {
     Case caseEntity = caseRepository.findById(caseId)
             .orElseThrow(CaseNotFoundException::new);
 
+
     caseAccessService.validateTenantAccess(caseEntity);
 
     caseAccessService.validateCaseAccess(caseEntity, currentUser);
 
     caseAccessService.validateEditAccess(caseEntity, currentUser, isAdmin);
+
 
     // 5️⃣ Capture old values for audit
     String oldTitle = caseEntity.getTitle();
@@ -364,6 +373,7 @@ public CaseResponse updateCaseSensitivity(Long caseId, SensitivityLevel newLevel
             .orElseThrow(CaseNotFoundException::new);
 
     caseAccessService.validateTenantAccess(c);
+    caseAccessService.validateEditAccess(c, admin, true);
 
     SensitivityLevel oldLevel = c.getSensitivityLevel();
 

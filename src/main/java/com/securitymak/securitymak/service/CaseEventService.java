@@ -1,6 +1,7 @@
 package com.securitymak.securitymak.service;
 
 import com.securitymak.securitymak.dto.CreateCaseEventRequest;
+import com.securitymak.securitymak.dto.UpdateCaseEventRequest;
 import com.securitymak.securitymak.exception.UnauthorizedCaseAccessException;
 import com.securitymak.securitymak.dto.CaseEventResponse;
 import com.securitymak.securitymak.model.*;
@@ -33,14 +34,12 @@ public class CaseEventService {
 
         caseAccessService.validateTenantAccess(caseEntity);
         caseAccessService.validateCaseAccess(caseEntity, currentUser);
+    caseAccessService.validateEditAccess(caseEntity, currentUser, isAdmin);;
 
         boolean isOwner = caseEntity.getOwner().getId()
                 .equals(currentUser.getId());
 
-        if (!isOwner && !isAdmin) {
-            throw new RuntimeException("Only owner or admin can add events");
-        }
-
+        
         CaseEvent event = CaseEvent.builder()
                 .tenantId(tenantId)
                 .caseEntity(caseEntity)
@@ -91,6 +90,8 @@ public class CaseEventService {
     public void deleteEvent(Long eventId) {
 
     SecurityUtils.requireAdmin();
+    User currentUser = SecurityUtils.getCurrentUser();
+boolean isAdmin = true;
 
     Long tenantId = SecurityUtils.getCurrentTenantId();
     String adminEmail = SecurityUtils.getCurrentUserEmail();
@@ -98,6 +99,8 @@ public class CaseEventService {
     CaseEvent event = caseEventRepository.findById(eventId)
             .orElseThrow();
 
+              Case caseEntity = event.getCaseEntity();
+caseAccessService.validateEditAccess(caseEntity, currentUser, isAdmin);
     // Ensure tenant isolation
     if (!event.getTenantId().equals(tenantId)) {
         throw new UnauthorizedCaseAccessException();
@@ -129,4 +132,57 @@ event.deactivate();
                 e.getCreatedAt()
         );
     }
+
+    public CaseEventResponse updateEvent(
+        Long caseId,
+        Long eventId,
+        UpdateCaseEventRequest request
+) {
+
+    User currentUser = SecurityUtils.getCurrentUser();
+    Long tenantId = SecurityUtils.getCurrentTenantId();
+    boolean isAdmin = SecurityUtils.isAdmin();
+
+    Case caseEntity = caseRepository.findById(caseId)
+            .orElseThrow();
+
+    caseAccessService.validateTenantAccess(caseEntity);
+    caseAccessService.validateCaseAccess(caseEntity, currentUser);
+    caseAccessService.validateEditAccess(caseEntity, currentUser, isAdmin);
+
+    CaseEvent event = caseEventRepository.findById(eventId)
+            .orElseThrow(() -> new RuntimeException("Event not found"));
+
+    if (!event.getTenantId().equals(tenantId)) {
+        throw new UnauthorizedCaseAccessException();
+    }
+
+    // Update fields
+    event = CaseEvent.builder()
+            .id(event.getId())
+            .tenantId(event.getTenantId())
+            .caseEntity(event.getCaseEntity())
+            .createdBy(event.getCreatedBy())
+            .createdAt(event.getCreatedAt())
+            .active(true)
+            .eventType(request.eventType())
+            .description(request.description())
+            .eventDate(request.eventDate())
+            .nextDate(request.nextDate())
+            .build();
+
+    caseEventRepository.save(event);
+
+    auditService.log(
+            currentUser.getEmail(),
+            AuditAction.CASE_UPDATED,
+            "CASE_EVENT_UPDATED",
+            eventId,
+            null,
+            request.eventType().name(),
+            tenantId
+    );
+
+    return toResponse(event);
+}
 }

@@ -55,4 +55,6 @@ public enum AuditAction {
 
     ASSIGNMENT_REMOVED,
 
+    ACCOUNT_SELF_DISABLED,
+
 }

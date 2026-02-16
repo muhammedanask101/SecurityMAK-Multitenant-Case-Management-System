@@ -1,5 +1,6 @@
 package com.securitymak.securitymak.controller;
 
+import com.securitymak.securitymak.dto.CaseDocumentGroupResponse;
 import com.securitymak.securitymak.dto.CaseDocumentResponse;
 import com.securitymak.securitymak.model.SensitivityLevel;
 import com.securitymak.securitymak.service.CaseDocumentService;
@@ -39,9 +40,9 @@ public CaseDocumentResponse upload(
     /* =====================================================
        LIST DOCUMENTS
     ====================================================== */
-    @GetMapping
+       @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public List<CaseDocumentResponse> list(
+    public List<CaseDocumentGroupResponse> list(
             @PathVariable Long caseId
     ) {
         return service.list(caseId);
@@ -70,4 +71,14 @@ public CaseDocumentResponse upload(
     ) {
         service.delete(documentId);
     }
+
+    @PatchMapping("/{documentGroupId}/sensitivity")
+@PreAuthorize("hasRole('ADMIN')")
+public void updateSensitivity(
+        @PathVariable Long caseId,
+        @PathVariable String documentGroupId,
+        @RequestParam SensitivityLevel sensitivityLevel
+) {
+    service.updateGroupSensitivity(caseId, documentGroupId, sensitivityLevel);
+}
 }
